@@ -289,6 +289,7 @@ protected:
 	void setFillAndStrokeForPDF(GfxState* state, PageItem* textNode);
 	void applyMask(PageItem* ite);
 	void pushGroup(const QString& maskName = "", GBool forSoftMask = gFalse, GBool alpha = gFalse, bool inverted = false);
+	QString getColor(GfxColorSpace* color_space, POPPLER_CONST_070 GfxColor* color, int* shade);
 
 	ScribusDoc* m_doc;
 	Qt::PenCapStyle PLineEnd{ Qt::FlatCap };
@@ -309,8 +310,7 @@ protected:
 	QStack<groupEntry> m_groupStack;
 	int CurrFillShade{ 100 };
 private:
-	void getPenState(GfxState *state);
-	QString getColor(GfxColorSpace *color_space, POPPLER_CONST_070 GfxColor *color, int *shade);
+	void getPenState(GfxState *state);	
 	QString getAnnotationColor(const AnnotColor *color);
 	QString convertPath(POPPLER_CONST_083 GfxPath *path);
 	int getBlendMode(GfxState *state);

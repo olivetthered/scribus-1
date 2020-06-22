@@ -23,7 +23,6 @@ for which a new license (GPL+exception) is in place.
 class PdfTextFont
 {
 public:
-	void Apply(ScribusDoc& p);
 	int    charset;
 	QFont  font;
 	double rotation;
@@ -166,8 +165,20 @@ public:
 
 	void setCharMode(AddCharMode mode)
 	{
+		qDebug() << "charmode is:" << static_cast<int>(m_addCharMode) << " and it's being set to:" << static_cast<int>(mode);
+		if ((m_addCharMode == AddCharMode::ADDCHARWITHNEWSTYLE || m_addCharMode == AddCharMode::ADDCHARWITHBASESTLYE) && mode == AddCharMode::ADDFIRSTCHAR)
+		{
+			qDebug() << "attempt to set addCharMode to  AddCharMode::ADDFIRSTCHAR  when it is already set to ddCharMode::ADDCHARWITHNEWSTYLE or  AddCharMode::ADDCHARWITHBASESTLYE which have a higher precedence, returning";
+			return;
+		}
+		if (m_addCharMode == AddCharMode::ADDCHARWITHBASESTLYE && mode == AddCharMode::ADDCHARWITHNEWSTYLE)
+		{
+			qDebug() << "attempt to set addCharMode to  AddCharMode::ADDCHARWITHNEWSTYLE  when it is already set to ddCharMode::ADDCHARWITHBASESTLYE which has a higher precedence, returning";
+			return;
+		}
 		m_addCharMode = mode;
 	}
+
 
 	PdfTextRegion&& activePdfTextRegion = PdfTextRegion(); //faster and cleaner than calling back on the vector all the time.
 	void addPdfTextRegion();
@@ -175,12 +186,13 @@ public:
 	bool isNewLineOrRegion(QPointF newPosition);
 private:
 	std::vector<PdfTextRegion> m_pdfTextRegions = std::vector<PdfTextRegion>();
-	AddCharMode m_addCharMode = AddCharMode::ADDFIRSTCHAR;
+	AddCharMode m_addCharMode = AddCharMode::ADDCHARWITHBASESTLYE;
 	PdfGlyph AddCharCommon(GfxState* state, double x, double y, double dx, double dy, Unicode const* u, int uLen);
 	PdfGlyph AddFirstChar(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfGlyph AddBasicChar(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfGlyph AddCharWithNewStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfGlyph AddCharWithPreviousStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
+	PdfGlyph AddCharWithBaseStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfTextFont m_fontStyle;          // Current font style
 };
 
