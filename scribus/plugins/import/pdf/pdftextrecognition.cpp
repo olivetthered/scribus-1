@@ -391,8 +391,7 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 		lineSpacing = newGlyph.dx * 3;
 		lastXY = newGlyphPoint;
 		lineBaseXY = newGlyphPoint;
-	} else if (pdfTextRegionLines.size() == 1)
-		lineSpacing = maxWidth * 3;
+	}
 
 	LineType mode = isRegionConcurrent(newGlyphPoint);
 	if (mode == LineType::FAIL)
@@ -739,7 +738,7 @@ void PdfTextOutputDev::endTextObject(GfxState* state)
 	else if (!m_pdfTextRecognition.activePdfTextRegion.pdfTextRegionLines.empty())
 		qDebug("FIXME:Rogue textblock");
 
-	m_pdfTextRecognition.setCharMode(PdfTextRecognition::AddCharMode::ADDFIRSTCHAR);
+	m_pdfTextRecognition.setCharMode(PdfTextRecognition::AddCharMode::ADDCHARWITHBASESTLYE);
 
 	SlaOutputDev::endTextObject(state);
 }
@@ -1030,8 +1029,8 @@ size_t PdfTextOutputDev::MatchingChars(QString s1, QString sp)
 {
 	qDebug() << "MatchingChars()";
 	//use uinit not size_t to keep QT happy
-	uint is = 0;
-	uint ip = 0;
+	int is = 0;
+	int ip = 0;
 
 	while (is < s1.length() && ip < sp.length())
 	{
