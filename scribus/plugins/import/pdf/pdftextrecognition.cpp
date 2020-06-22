@@ -147,8 +147,8 @@ PdfGlyph PdfTextRecognition::AddCharWithNewStyle(GfxState* state, double x, doub
 	auto success = activePdfTextRegion.moveToPoint(QPointF{ x, y });
 	if (success == PdfTextRegion::LineType::FAIL)
 		qDebug() << "moveTo just failed, maybe we shouldn't be calling addGlyph if moveto has just failed.";
-	return newGlyph;
-	//auto success = activePdfTextRegion.addGlyphAtPoint(QPointF(x, y), newGlyph);
+	//return newGlyph;
+	success = activePdfTextRegion.addGlyphAtPoint(QPointF(x, y), newGlyph);
 	return newGlyph;
 	if (success == PdfTextRegion::LineType::FAIL)
 		qDebug("FIXME: Rogue glyph detected, this should never happen because the cursor should move before glyphs in new regions are added.");
@@ -177,6 +177,7 @@ PdfGlyph PdfTextRecognition::AddCharWithBaseStyle(GfxState* state, double x, dou
 	//qDebug() << "AddFirstChar() '" << u << " : " << uLen;
 	PdfGlyph newGlyph = PdfTextRecognition::AddCharCommon(state, x, y, dx, dy, u, uLen);	
 	setCharMode(AddCharMode::ADDBASICCHAR);
+	activePdfTextRegion.SetNewFontAndStyle(&m_fontStyle);
 	auto success = activePdfTextRegion.moveToPoint(QPointF(x, y));
 	activePdfTextRegion.glyphs.push_back(newGlyph);
 	//only need to be called for the very first point
@@ -465,9 +466,9 @@ bool PdfTextRegion::isNew()
 		glyphs.empty();
 }
 
-void PdfTextRegion::SetNewFontAndStyle(PdfTextFont *m_fontStyle)
+void PdfTextRegion::SetNewFontAndStyle(PdfTextFont *fontStyle)
 {
-	m_newFontStyleToApply = m_fontStyle;
+	m_newFontStyleToApply = fontStyle;
 }
 
 
@@ -814,7 +815,7 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 	m_pdfTextRecognition.setCharMode(PdfTextRecognition::AddCharMode::ADDCHARWITHNEWSTYLE);
 	//TODO: Implement  a cache so we don't have to keep on calculating font substitutions.
 	m_previouisFontAndStyle = m_fontStyle;
-
+	
 	//we've got this far so we are good to start afresh with a new PdfTextFont
 	m_fontStyle = PdfTextFont();
 	// Prune the font name to get the correct font family name
@@ -984,7 +985,7 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 GBool PdfTextOutputDev::beginType3Char(GfxState* state, double x, double y, double dx, double dy, CharCode code, POPPLER_CONST_082 Unicode* u, int uLen)
 {
 	//stub
-	return gTrue;
+	return gFalse;
 }
 void  PdfTextOutputDev::endType3Char(GfxState* state)
 {
