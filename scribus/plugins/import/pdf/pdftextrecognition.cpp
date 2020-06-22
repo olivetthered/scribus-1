@@ -412,15 +412,15 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 #if 1
 	if (m_newFontStyleToApply)
 	{
-		segment->pdfTextFont = *m_newFontStyleToApply;
+		segment->pdfGlyphStyle = *m_newFontStyleToApply;
 		if (pdfTextRegionLine->segments.size() == 1)
-			pdfTextRegionLine->pdfTextFont = *m_newFontStyleToApply;
+			pdfTextRegionLine->pdfGlyphStyle = *m_newFontStyleToApply;
 		m_newFontStyleToApply = nullptr;
 	}
 	else if (pdfTextRegionLine->segments.size() > 1)
-		segment->pdfTextFont = pdfTextRegionLine->segments[pdfTextRegionLine->segments.size() - 1].pdfTextFont;
+		segment->pdfGlyphStyle = pdfTextRegionLine->segments[pdfTextRegionLine->segments.size() - 1].pdfGlyphStyle;
 	else
-		segment->pdfTextFont = pdfTextRegionLine->pdfTextFont;
+		segment->pdfGlyphStyle = pdfTextRegionLine->pdfGlyphStyle;
 #endif
 	qreal thisHeight = pdfTextRegionLines.size() > 1 ?
 		abs(newGlyphPoint.y() - pdfTextRegionLines[pdfTextRegionLines.size() - 2].baseOrigin.y()) :
@@ -465,7 +465,7 @@ bool PdfTextRegion::isNew()
 		glyphs.empty();
 }
 
-void PdfTextRegion::SetNewFontAndStyle(PdfTextFont *fontStyle)
+void PdfTextRegion::SetNewFontAndStyle(PdfGlyphStyle* fontStyle)
 {
 	m_newFontStyleToApply = fontStyle;
 }
@@ -638,7 +638,7 @@ void PdfTextOutputDev::renderTextFrame()
 	*/
 	QString CurrColorText = CurrFillShade;// getColor(state->getFillColorSpace(), state->getFillColor(), &shade);
 	//applyTextStyleToCharStyle(pStyle.charStyle(), _glyphs[0].style->getFont().family(), CurrColorText, _glyphs[0].style->getFont().pointSizeF());// *_font_scaling);
-	applyTextStyle(textNode, activePdfTextRegion->pdfTextRegionLines.begin()->pdfTextFont.font.family(), CurrColorText, activePdfTextRegion->pdfTextRegionLines.begin()->pdfTextFont.font.pointSizeF());
+	applyTextStyle(textNode, activePdfTextRegion->pdfTextRegionLines.begin()->pdfGlyphStyle.getFont().family(), CurrColorText, activePdfTextRegion->pdfTextRegionLines.begin()->pdfGlyphStyle.getFont().pointSizeF());
 	CharStyle& cStyle = static_cast<CharStyle&>(pStyle.charStyle());
 	cStyle.setScaleH(1000.0);
 	cStyle.setScaleV(1000.0);
@@ -815,8 +815,8 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 	//TODO: Implement  a cache so we don't have to keep on calculating font substitutions.
 	m_previouisFontAndStyle = m_fontStyle;
 	
-	//we've got this far so we are good to start afresh with a new PdfTextFont
-	m_fontStyle = PdfTextFont();
+	//we've got this far so we are good to start afresh with a new PdfGlyphStyle
+	m_fontStyle = PdfGlyphStyle();
 	// Prune the font name to get the correct font family name
 	// In a PDF font names can look like this: IONIPB+MetaPlusBold-Italic
 	QString font_family;

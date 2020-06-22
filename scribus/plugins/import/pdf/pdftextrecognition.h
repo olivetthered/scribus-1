@@ -23,10 +23,9 @@ for which a new license (GPL+exception) is in place.
 class PdfTextFont
 {
 public:
-	int    charset;
+	int    charset = { 1 };
 	QFont  font;
-	double rotation;
-	PdfTextFont() { charset = 1; rotation = 0.0; }
+	double rotation = { 0.0 };
 };
 
 
@@ -41,7 +40,7 @@ public:
 	{
 		this->font = font;
 	}
-	QFont getFont()
+	const QFont getFont()
 	{
 		return this->font;
 	}
@@ -49,11 +48,19 @@ public:
 	{
 		this->fill = fill;
 	}
+	bool getFill()
+	{
+		return this->fill;
+	}
+	bool hetStroke()
+	{
+		 return stroke;
+	}
 	void setStroke(bool stroke)
 	{
 		this->stroke = stroke;
 	}
-	QString toString(void)
+	QString toString(void) 
 	{
 		QTextStream result;
 		result << "fill=" << fill << ":stroke=" << stroke << ":font=" << font.toString();
@@ -85,7 +92,7 @@ public:
 	int glyphIndex = {};
 	QPointF baseOrigin = QPointF({}, {});
 	std::vector<PdfTextRegionLine> segments = std::vector<PdfTextRegionLine>();
-	PdfTextFont pdfTextFont = {}; // FIXME: this should be a PdfGlyphStyle
+	PdfGlyphStyle pdfGlyphStyle = {};
 
 };
 
@@ -141,11 +148,11 @@ public:
 	PdfTextRegion::LineType moveToPoint(QPointF newPoint);
 	PdfTextRegion::LineType addGlyphAtPoint(QPointF newGlyphPoint, PdfGlyph new_glyph);
 	void renderToTextFrame(PageItem* textNode);
-	void SetNewFontAndStyle(PdfTextFont *fontAndSttle); //FIXM<E: this should be PdfGlyphStyle
+	void SetNewFontAndStyle(PdfGlyphStyle* fontAndSttle);
 	std::vector<PdfGlyph> glyphs;
 	bool isNew();
 private:
-	PdfTextFont* m_newFontStyleToApply = nullptr;          //FIXM<E: this should be PdfGlyphStyle
+	PdfGlyphStyle* m_newFontStyleToApply = nullptr;          
 };
 
 class PdfTextRecognition
@@ -193,7 +200,7 @@ private:
 	PdfGlyph AddCharWithNewStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfGlyph AddCharWithPreviousStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfGlyph AddCharWithBaseStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
-	PdfTextFont m_fontStyle;          // Current font style
+	PdfGlyphStyle m_pdfGlyphStyle;
 };
 
 
@@ -224,6 +231,7 @@ private:
 	void renderTextFrame();
 	void finishItem(PageItem* item);
 	PdfTextRecognition m_pdfTextRecognition = {};
+	PdfGlyphStyle m_pdfGlyphStyle = {};
 	PdfTextFont m_fontStyle = {};
 	PdfTextFont m_previouisFontAndStyle = {};
 	bool m_invalidatedStyle = true;
