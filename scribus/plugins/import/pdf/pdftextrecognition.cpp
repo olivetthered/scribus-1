@@ -149,7 +149,7 @@ PdfGlyph PdfTextRecognition::AddCharWithNewStyle(GfxState* state, double x, doub
 		qDebug() << "moveTo just failed, maybe we shouldn't be calling addGlyph if moveto has just failed.";
 	//return newGlyph;
 	success = activePdfTextRegion.addGlyphAtPoint(QPointF(x, y), newGlyph);
-	return newGlyph;
+	//return newGlyph;
 	if (success == PdfTextRegion::LineType::FAIL)
 		qDebug("FIXME: Rogue glyph detected, this should never happen because the cursor should move before glyphs in new regions are added.");
 	return newGlyph;
