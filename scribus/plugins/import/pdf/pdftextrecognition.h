@@ -86,6 +86,7 @@ public:
 	int glyphIndex = {};
 	QPointF baseOrigin = QPointF({}, {});
 	std::vector<PdfTextRegionLine> segments = std::vector<PdfTextRegionLine>();
+	PdfTextFont pdfTextFont = {};
 
 };
 
@@ -141,8 +142,11 @@ public:
 	PdfTextRegion::LineType moveToPoint(QPointF newPoint);
 	PdfTextRegion::LineType addGlyphAtPoint(QPointF newGlyphPoint, PdfGlyph new_glyph);
 	void renderToTextFrame(PageItem* textNode);
+	void SetNewFontAndStyle(PdfTextFont *fontAndSttle);
 	std::vector<PdfGlyph> glyphs;
 	bool isNew();
+private:
+	PdfTextFont* m_newFontStyleToApply = nullptr;          // A transient fontStyle that only hangs around long enough to get apoplied.
 };
 
 class PdfTextRecognition
@@ -209,11 +213,14 @@ private:
 	void finishItem(PageItem* item);
 	PdfTextRecognition m_pdfTextRecognition = {};
 	PdfTextFont m_fontStyle = {};
+	PdfTextFont m_previouisFontAndStyle = {};
 	bool m_invalidatedStyle = true;
 	QString m_lastFontSpecification = {};
 	QTransform m_textMatrix = {};
 	double m_fontScaling = {};
 	bool m_needFontUpdate = true;
+	QStringList m_availableFontNames = {};
+	double _font_scaling = { 1.0 };
 };
 
 /**

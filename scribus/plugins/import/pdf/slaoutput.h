@@ -295,10 +295,6 @@ protected:
 	Qt::PenJoinStyle PLineJoin{ Qt::MiterJoin };
 	QList<PageItem*>* m_Elements;
 
-	QStringList m_availableFontNames;
-	QFont  _current_font;
-	double _font_scaling;
-	
 	struct groupEntry
 	{
 		QList<PageItem*> Items;
