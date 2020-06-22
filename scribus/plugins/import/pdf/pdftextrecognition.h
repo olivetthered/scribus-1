@@ -18,6 +18,51 @@ for which a new license (GPL+exception) is in place.
 #include <poppler/GfxState.h>
 #include <poppler/CharCodeToUnicode.h>
 
+
+
+class PdfTextFont
+{
+public:
+	void Apply(ScribusDoc& p);
+	int    charset;
+	QFont  font;
+	double rotation;
+	PdfTextFont() { charset = 1; rotation = 0.0; }
+};
+
+
+class PdfGlyphStyle
+{
+protected:
+	QFont font;
+	bool  fill;
+	bool stroke;
+public:
+	void setFont(QFont font)
+	{
+		this->font = font;
+	}
+	QFont getFont()
+	{
+		return this->font;
+	}
+	void setFill(bool fill)
+	{
+		this->fill = fill;
+	}
+	void setStroke(bool stroke)
+	{
+		this->stroke = stroke;
+	}
+	QString toString(void)
+	{
+		QTextStream result;
+		result << "fill=" << fill << ":stroke=" << stroke << ":font=" << font.toString();
+		result.flush();
+		return *result.string();
+	}
+};
+
 /* PDF TextBox Framework */
 /*
 * Holds all the details for each glyph in the text imported from the pdf file.
@@ -132,6 +177,7 @@ private:
 	PdfGlyph AddBasicChar(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfGlyph AddCharWithNewStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfGlyph AddCharWithPreviousStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
+	PdfTextFont m_fontStyle;          // Current font style
 };
 
 
@@ -151,11 +197,46 @@ public:
 	void  endType3Char(GfxState* /*state*/) override;
 	void  type3D0(GfxState* /*state*/, double /*wx*/, double /*wy*/) override;
 	void  type3D1(GfxState* /*state*/, double /*wx*/, double /*wy*/, double /*llx*/, double /*lly*/, double /*urx*/, double /*ury*/) override;
+	void updateTextMat(GfxState* state) override;
+	void updateTextShift(GfxState* state, double shift) override;
+	static size_t MatchingChars(QString s1, QString sp);
+	QString _bestMatchingFont(QString PDFname);
+	void _updateStyle(GfxState* state);
 private:
 	void setFillAndStrokeForPDF(GfxState* state, PageItem* text_node);
 	void updateTextPos(GfxState* state) override;
 	void renderTextFrame();
 	void finishItem(PageItem* item);
 	PdfTextRecognition m_pdfTextRecognition = {};
+	PdfTextFont m_fontStyle = {};
+	bool m_invalidatedStyle = true;
+	QString m_lastFontSpecification = {};
+	QTransform m_textMatrix = {};
+	double m_fontScaling = {};
+	bool m_needFontUpdate = true;
 };
+
+/**
+ * This array holds info about translating font weight names to more or less CSS equivalents
+ */
+static char* font_weight_translator[][2] = {
+	{(char*)"bold",        (char*)"bold"},
+	{(char*)"light",       (char*)"300"},
+	{(char*)"black",       (char*)"900"},
+	{(char*)"heavy",       (char*)"900"},
+	{(char*)"ultrabold",   (char*)"800"},
+	{(char*)"extrabold",   (char*)"800"},
+	{(char*)"demibold",    (char*)"600"},
+	{(char*)"semibold",    (char*)"600"},
+	{(char*)"medium",      (char*)"500"},
+	{(char*)"book",        (char*)"normal"},
+	{(char*)"regular",     (char*)"normal"},
+	{(char*)"roman",       (char*)"normal"},
+	{(char*)"normal",      (char*)"normal"},
+	{(char*)"ultralight",  (char*)"200"},
+	{(char*)"extralight",  (char*)"200"},
+	{(char*)"thin",        (char*)"100"}
+};
+
+
 #endif

@@ -941,10 +941,6 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 	// Font size, does this really only work with this one type?
 	//Inkscape::CSSOStringStream os_font_size;
 	double css_font_size = _font_scaling * state->getFontSize();
-/*
-*	I have no idea what this is or does but it's producing some interesting results which means it's not working whatever it's supposed to do.
-*/
-#if 0
 	if (font != 0)
 	{
 		if (font->getType() == fontType3)
@@ -956,7 +952,6 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 			}
 		}
 	}
-#endif
 	m_fontStyle.font.setPointSizeF(css_font_size);
 
 	/* This doesn't appear to be supported by QT

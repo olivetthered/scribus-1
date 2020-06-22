@@ -54,6 +54,7 @@ for which a new license (GPL+exception) is in place.
 #include <poppler/splash/SplashMath.h>
 #include <poppler/splash/SplashPath.h>
 #include <poppler/splash/SplashGlyphBitmap.h>
+#include <pdfstructs.h>
 
 //------------------------------------------------------------------------
 // LinkSubmitData
@@ -294,6 +295,10 @@ protected:
 	Qt::PenJoinStyle PLineJoin{ Qt::MiterJoin };
 	QList<PageItem*>* m_Elements;
 
+	QStringList m_availableFontNames;
+	QFont  _current_font;
+	double _font_scaling;
+	
 	struct groupEntry
 	{
 		QList<PageItem*> Items;
