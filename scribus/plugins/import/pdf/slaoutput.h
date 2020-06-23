@@ -172,7 +172,7 @@ public:
 	bool handleTextAnnot(Annot* annota, double xCoor, double yCoor, double width, double height);
 	bool handleLinkAnnot(Annot* annota, double xCoor, double yCoor, double width, double height);
 	bool handleWidgetAnnot(Annot* annota, double xCoor, double yCoor, double width, double height);
-	void applyTextStyle(PageItem* ite, const QString& fontName, const QString& textColor, double fontSize);
+	static void applyTextStyle(PageItem* ite, const QString& fontName, const QString& textColor, double fontSize);
 	void handleActions(PageItem* ite, AnnotWidget *ano);
 	void startDoc(PDFDoc *doc, XRef *xrefA, Catalog *catA);
 
@@ -308,7 +308,11 @@ protected:
 	};
 
 	QStack<groupEntry> m_groupStack;
+	QString CurrColorFill;
+	QString CurrColorStroke;
+
 	int CurrFillShade{ 100 };
+	int CurrStrokeShade{ 100 };
 private:
 	void getPenState(GfxState *state);	
 	QString getAnnotationColor(const AnnotColor *color);
@@ -330,10 +334,8 @@ private:
 	void createImageFrame(QImage& image, GfxState *state, int numColorComponents);
 
 	bool pathIsClosed {false};
-	QString CurrColorFill;
 
-	QString CurrColorStroke;
-	int CurrStrokeShade {100};
+
 	QVector<double> DashValues;
 	double DashOffset {0.0};
 	QString Coords;

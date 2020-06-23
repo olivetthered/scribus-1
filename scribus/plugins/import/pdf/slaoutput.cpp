@@ -923,7 +923,7 @@ void SlaOutputDev::applyTextStyle(PageItem* ite, const QString& fontName, const 
 	newStyle.setFontSize(fontSize * 10);
 	if (!fontName.isEmpty())
 	{
-		SCFontsIterator it(*m_doc->AllFonts);
+		SCFontsIterator it(*ite->doc()->AllFonts);
 		for ( ; it.hasNext() ; it.next())
 		{
 			ScFace& face(it.current());
@@ -3466,7 +3466,7 @@ void SlaOutputDev::endTextObject(GfxState *state)
 	}
 }
 
-QString SlaOutputDev::getColor(GfxColorSpace *color_space, POPPLER_CONST_070 GfxColor *color, int *shade)
+QString  SlaOutputDev::getColor(GfxColorSpace *color_space, POPPLER_CONST_070 GfxColor *color, int *shade)
 {
 	QString fNam;
 	QString namPrefix = "FromPDF";
@@ -3499,7 +3499,7 @@ QString SlaOutputDev::getColor(GfxColorSpace *color_space, POPPLER_CONST_070 Gfx
 		double Yc = colToDbl(cmyk.y);
 		double Kc = colToDbl(cmyk.k);
 		tmp.setCmykColorF(Cc, Mc, Yc, Kc);
-		fNam = m_doc->PageColors.tryAddColor(namPrefix+tmp.name(), tmp);
+		fNam = m_doc->PageColors.tryAddColor(namPrefix + tmp.name(), tmp);
 	}
 	else if ((color_space->getMode() == csCalGray) || (color_space->getMode() == csDeviceGray))
 	{

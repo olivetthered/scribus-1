@@ -29,37 +29,17 @@ public:
 };
 
 
-class PdfGlyphStyle
+struct PdfGlyphStyle
 {
-protected:
+public:
 	QFont font;
 	bool  fill;
 	bool stroke;
-public:
-	void setFont(QFont font)
-	{
-		this->font = font;
-	}
-	const QFont getFont()
-	{
-		return this->font;
-	}
-	void setFill(bool fill)
-	{
-		this->fill = fill;
-	}
-	bool getFill()
-	{
-		return this->fill;
-	}
-	bool hetStroke()
-	{
-		 return stroke;
-	}
-	void setStroke(bool stroke)
-	{
-		this->stroke = stroke;
-	}
+	double rotation = { 0.0 };
+	int    charset = { 1 };
+	QString currColorFill;
+	QString currColorStroke;
+	int currStrokeShade{ 100 };
 	QString toString(void) 
 	{
 		QTextStream result;
@@ -191,6 +171,8 @@ public:
 	void addPdfTextRegion();
 	void addChar(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, POPPLER_CONST_082 Unicode* u, int uLen);
 	bool isNewLineOrRegion(QPointF newPosition);
+	void setFillColour(QString fillColour);
+	void setStrokeColour(QString strokleColour);
 private:
 	std::vector<PdfTextRegion> m_pdfTextRegions = std::vector<PdfTextRegion>();
 	AddCharMode m_addCharMode = AddCharMode::ADDCHARWITHBASESTLYE;
@@ -211,6 +193,8 @@ public:
 	virtual ~PdfTextOutputDev();
 
 	void updateFont(GfxState* state) override;
+	void updateFillColor(GfxState* state) override;
+	void updateStrokeColor(GfxState* state) override;
 
 	//----- text drawing
 	void  beginTextObject(GfxState* state) override;
@@ -231,9 +215,8 @@ private:
 	void renderTextFrame();
 	void finishItem(PageItem* item);
 	PdfTextRecognition m_pdfTextRecognition = {};
-	PdfGlyphStyle m_pdfGlyphStyle = {};
-	PdfTextFont m_fontStyle = {};
-	PdfTextFont m_previouisFontAndStyle = {};
+	PdfGlyphStyle m_pdfGlyphStyle = {};	
+	PdfGlyphStyle m_previouisGlyphStyle = {};
 	bool m_invalidatedStyle = true;
 	QString m_lastFontSpecification = {};
 	QTransform m_textMatrix = {};

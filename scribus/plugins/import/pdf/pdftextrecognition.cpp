@@ -76,6 +76,18 @@ bool PdfTextRecognition::isNewLineOrRegion(QPointF newPosition)
 			&& !activePdfTextRegion.isCloseToX(newPosition.x(), activePdfTextRegion.lastXY.x()));
 }
 
+void PdfTextRecognition::setFillColour(QString fillColour)
+{
+	m_pdfGlyphStyle.currColorFill = fillColour;
+	setCharMode(AddCharMode::ADDCHARWITHNEWSTYLE);
+}
+
+void PdfTextRecognition::setStrokeColour(QString strokleColour)
+{
+	m_pdfGlyphStyle.currColorStroke = strokleColour;
+	setCharMode(AddCharMode::ADDCHARWITHNEWSTYLE);
+}
+
 
 /*
 *	basic functionality to be performed when addChar is called
@@ -89,6 +101,7 @@ PdfGlyph PdfTextRecognition::AddCharCommon(GfxState* state, double x, double y, 
 	newGlyph.dy = dy;
 
 	// Convert the character to UTF-16 since that's our SVG document's encoding
+	//m_pdfGlyphStyle.currColorStroke = getColor(state->getStrokeColorSpace(), m_pdfGlyphStyle.currColorStroke, m_pdfGlyphStyle.currStrokeShade);
 
 	if (uLen > 1)
 		qDebug() << "FIXME: AddBasicChar() '" << u << " : " << uLen;
@@ -139,17 +152,12 @@ PdfGlyph PdfTextRecognition::AddCharWithNewStyle(GfxState* state, double x, doub
 	//activePdfTextRegion.lastXY = QPointF(x, y);
 	activePdfTextRegion.glyphs.push_back(newGlyph);
 	setCharMode(AddCharMode::ADDBASICCHAR);
-
 	
-	
-	//activePdfTextRegion.glyphs.push_back(newGlyph);
-	activePdfTextRegion.SetNewFontAndStyle(&m_fontStyle);
+	activePdfTextRegion.SetNewFontAndStyle(&m_pdfGlyphStyle);
 	auto success = activePdfTextRegion.moveToPoint(QPointF{ x, y });
 	if (success == PdfTextRegion::LineType::FAIL)
 		qDebug() << "moveTo just failed, maybe we shouldn't be calling addGlyph if moveto has just failed.";
-	//return newGlyph;
 	success = activePdfTextRegion.addGlyphAtPoint(QPointF(x, y), newGlyph);
-	//return newGlyph;
 	if (success == PdfTextRegion::LineType::FAIL)
 		qDebug("FIXME: Rogue glyph detected, this should never happen because the cursor should move before glyphs in new regions are added.");
 	return newGlyph;
@@ -177,7 +185,7 @@ PdfGlyph PdfTextRecognition::AddCharWithBaseStyle(GfxState* state, double x, dou
 	//qDebug() << "AddFirstChar() '" << u << " : " << uLen;
 	PdfGlyph newGlyph = PdfTextRecognition::AddCharCommon(state, x, y, dx, dy, u, uLen);	
 	setCharMode(AddCharMode::ADDBASICCHAR);
-	activePdfTextRegion.SetNewFontAndStyle(&m_fontStyle);
+	activePdfTextRegion.SetNewFontAndStyle(&m_pdfGlyphStyle);
 	auto success = activePdfTextRegion.moveToPoint(QPointF(x, y));
 	activePdfTextRegion.glyphs.push_back(newGlyph);
 	//only need to be called for the very first point
@@ -444,10 +452,18 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 *	nothing clever for now, just apply the whole block of text to the textNode
 *	TODO: Add support for fonts and styles based on line segments
 *	add support for rotated text
+*	FIXME: P{ut in a temporary hack to make the font and style code path is working properly. 
+*		When finished it should be setting font an d style for spans of text.
 */
 void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 {
+	
+	SlaOutputDev::applyTextStyle(textNode, pdfTextRegionLines.front().pdfGlyphStyle.font.family(), 
+		pdfTextRegionLines.front().pdfGlyphStyle.currColorFill,
+		pdfTextRegionLines.front().pdfGlyphStyle.font.pointSizeF());
+	
 	textNode->setWidthHeight(this->maxWidth, this->maxHeight);
+	
 	QString bodyText = "";
 	for (int glyphIndex = this->pdfTextRegionLines.begin()->glyphIndex; glyphIndex <= this->pdfTextRegionLines.back().segments.back().glyphIndex; glyphIndex++)
 		bodyText += glyphs[glyphIndex].code;
@@ -636,16 +652,18 @@ void PdfTextOutputDev::renderTextFrame()
 	/*
 	* This code sets the font and style in a very simplistic way, it's been commented out as it needs to be updated to be used within PdfTextRecognition &co.
 	*/
-	QString CurrColorText = CurrFillShade;// getColor(state->getFillColorSpace(), state->getFillColor(), &shade);
+	QString CurrColorText = CurrColorFill;//CurrFillShade;// getColor(state->getFillColorSpace(), state->getFillColor(), &shade);
 	//applyTextStyleToCharStyle(pStyle.charStyle(), _glyphs[0].style->getFont().family(), CurrColorText, _glyphs[0].style->getFont().pointSizeF());// *_font_scaling);
-	applyTextStyle(textNode, activePdfTextRegion->pdfTextRegionLines.begin()->pdfGlyphStyle.getFont().family(), CurrColorText, activePdfTextRegion->pdfTextRegionLines.begin()->pdfGlyphStyle.getFont().pointSizeF());
+	
+	applyTextStyle(textNode, activePdfTextRegion->pdfTextRegionLines.begin()->pdfGlyphStyle.font.family(), CurrColorText, activePdfTextRegion->pdfTextRegionLines.begin()->pdfGlyphStyle.font.pointSizeF());
+	/*/
 	CharStyle& cStyle = static_cast<CharStyle&>(pStyle.charStyle());
 	cStyle.setScaleH(1000.0);
 	cStyle.setScaleV(1000.0);
 	cStyle.setHyphenChar(SpecialChars::BLANK.unicode());
 
 	textNode->itemText.setDefaultStyle(pStyle);
-	textNode->invalid = true;
+	textNode->invalid = true;*/
 	activePdfTextRegion->renderToTextFrame(textNode);
 	textNode->itemText.insertChars(SpecialChars::PARSEP, true);
 
@@ -771,7 +789,7 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 	m_needFontUpdate = false;
 	if (m_pdfTextRecognition.activePdfTextRegion.isNew())
 		m_lastFontSpecification = "Were in a new regon";
-	QFont origional_font_style = m_fontStyle.font;
+	QFont origional_font_style = m_pdfGlyphStyle.font;
 	qDebug() << "origional_font_style:" << origional_font_style;
 	qDebug() << "m_lastFontSpecification:" << m_lastFontSpecification;
 
@@ -813,10 +831,11 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 	}
 	m_pdfTextRecognition.setCharMode(PdfTextRecognition::AddCharMode::ADDCHARWITHNEWSTYLE);
 	//TODO: Implement  a cache so we don't have to keep on calculating font substitutions.
-	m_previouisFontAndStyle = m_fontStyle;
+	m_previouisGlyphStyle = m_pdfGlyphStyle;
 	
 	//we've got this far so we are good to start afresh with a new PdfGlyphStyle
-	m_fontStyle = PdfGlyphStyle();
+	//m_fontStyle = PdfTextFont();
+	m_pdfGlyphStyle.font = QFont();
 	// Prune the font name to get the correct font family name
 	// In a PDF font names can look like this: IONIPB+MetaPlusBold-Italic
 	QString font_family;
@@ -866,26 +885,26 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 		}
 	}
 	
-	m_fontStyle.font.setFamily(cs_font_family);
+	m_pdfGlyphStyle.font.setFamily(cs_font_family);
 
-	m_fontStyle.font.setStyle(QFont::StyleNormal);
+	m_pdfGlyphStyle.font.setStyle(QFont::StyleNormal);
 	// Font style
 	if (font != NULL && font->isItalic())
-		m_fontStyle.font.setStyle(QFont::StyleItalic);
+		m_pdfGlyphStyle.font.setStyle(QFont::StyleItalic);
 	else
 		if (font_style != "")
 			if ((font_style_lowercase.indexOf("italic") >= 0) ||
 				font_style_lowercase.indexOf("slanted") >= 0)
-				m_fontStyle.font.setStyle(QFont::StyleItalic);
+				m_pdfGlyphStyle.font.setStyle(QFont::StyleItalic);
 			else if (font_style_lowercase.indexOf("oblique") >= 0)
-				m_fontStyle.font.setStyle(QFont::StyleOblique);
+				m_pdfGlyphStyle.font.setStyle(QFont::StyleOblique);
 
 	qDebug() << "font_style_lowercase:" << font_style_lowercase;
 	if (font != NULL && font->isBold())
-		m_fontStyle.font.setBold(true);
+		m_pdfGlyphStyle.font.setBold(true);
 	else if ((font_style_lowercase.indexOf("bold") >= 0) ||
 		font_style_lowercase.indexOf("black") >= 0)
-		m_fontStyle.font.setBold(true);
+		m_pdfGlyphStyle.font.setBold(true);
 
 	// Font weight
 	GfxFont::Weight font_weight = font != NULL ? font->getWeight() : GfxFont::W400;	
@@ -893,11 +912,11 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 
 	if (font_weight != GfxFont::WeightNotDefined)
 		if (font_weight == GfxFont::W400)
-			m_fontStyle.font.setWeight(QFont::Normal);
+			m_pdfGlyphStyle.font.setWeight(QFont::Normal);
 		else if (font_weight == GfxFont::W700)
-			m_fontStyle.font.setWeight(QFont::Bold);
+			m_pdfGlyphStyle.font.setWeight(QFont::Bold);
 
-	m_fontStyle.font.setStretch(QFont::Unstretched);
+	m_pdfGlyphStyle.font.setStretch(QFont::Unstretched);
 	//TODO: this may be the correct default _font_style.font.setStretch(QFont::AnyStretch);
 
 	// Font stretch
@@ -905,31 +924,31 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 	switch (font_stretch)
 	{
 	case GfxFont::UltraCondensed:
-		m_fontStyle.font.setStretch(QFont::UltraCondensed);
+		m_pdfGlyphStyle.font.setStretch(QFont::UltraCondensed);
 		break;
 	case GfxFont::ExtraCondensed:
-		m_fontStyle.font.setStretch(QFont::ExtraCondensed);
+		m_pdfGlyphStyle.font.setStretch(QFont::ExtraCondensed);
 		break;
 	case GfxFont::Condensed:
-		m_fontStyle.font.setStretch(QFont::Condensed);
+		m_pdfGlyphStyle.font.setStretch(QFont::Condensed);
 		break;
 	case GfxFont::SemiCondensed:
-		m_fontStyle.font.setStretch(QFont::SemiCondensed);
+		m_pdfGlyphStyle.font.setStretch(QFont::SemiCondensed);
 		break;
 	case GfxFont::Normal:
-		m_fontStyle.font.setStretch(QFont::Unstretched);
+		m_pdfGlyphStyle.font.setStretch(QFont::Unstretched);
 		break;
 	case GfxFont::SemiExpanded:
-		m_fontStyle.font.setStretch(QFont::SemiExpanded);
+		m_pdfGlyphStyle.font.setStretch(QFont::SemiExpanded);
 		break;
 	case GfxFont::Expanded:
-		m_fontStyle.font.setStretch(QFont::Expanded);
+		m_pdfGlyphStyle.font.setStretch(QFont::Expanded);
 		break;
 	case GfxFont::ExtraExpanded:
-		m_fontStyle.font.setStretch(QFont::ExtraExpanded);
+		m_pdfGlyphStyle.font.setStretch(QFont::ExtraExpanded);
 		break;
 	case GfxFont::UltraExpanded:
-		m_fontStyle.font.setStretch(QFont::UltraExpanded);
+		m_pdfGlyphStyle.font.setStretch(QFont::UltraExpanded);
 		break;
 	default:
 		break;
@@ -954,19 +973,19 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 		}
 	}
 
-	m_fontStyle.font.setPointSizeF(css_font_size);
+	m_pdfGlyphStyle.font.setPointSizeF(css_font_size);
 
 
 	//I'm guessing that this looks up the font after all the parameters hav ebeen set.
-	m_fontStyle.font.resolve();
+	m_pdfGlyphStyle.font.resolve();
 	// this should only ever be called if it actually changes.
-	if (m_fontStyle.font.key() == origional_font_style.key() || m_fontStyle.font.toString() == origional_font_style.toString())
+	if (m_pdfGlyphStyle.font.key() == origional_font_style.key() || m_pdfGlyphStyle.font.toString() == origional_font_style.toString())
 	{
-		qDebug() << "Font hasn't changed .. " << m_fontStyle.font.key() << "  " << m_fontStyle.font.toString() << endl;
+		qDebug() << "Font hasn't changed .. " << m_pdfGlyphStyle.font.key() << "  " << m_pdfGlyphStyle.font.toString() << endl;
 	}
 	else
 	{
-		qDebug() << "Font has changed .. " << m_fontStyle.font.key() << "  " << m_fontStyle.font.toString() << endl;
+		qDebug() << "Font has changed .. " << m_pdfGlyphStyle.font.key() << "  " << m_pdfGlyphStyle.font.toString() << endl;
 		qDebug() << "Font has changed .. " << origional_font_style.key() << "  " << origional_font_style.toString() << endl;
 		m_invalidatedStyle = true;
 	}
@@ -975,6 +994,18 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 		//ADDCHARWITHPREVIOUSSTYLE,
 		//ADDCHARWITHBASESTLYE
 	
+}
+
+void PdfTextOutputDev::updateFillColor(GfxState* state)
+{
+	SlaOutputDev::updateFillColor(state);
+	this->m_pdfTextRecognition.setFillColour(CurrColorFill);
+}
+
+void PdfTextOutputDev::updateStrokeColor(GfxState* state) 
+{
+	SlaOutputDev::updateStrokeColor(state);
+	this->m_pdfTextRecognition.setStrokeColour(CurrColorStroke);
 }
 
 /*
