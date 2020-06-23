@@ -550,7 +550,7 @@ void PdfTextOutputDev::updateTextMat(GfxState* state)
 	//}
 	}
 	/* only call _flushText if things have actually changed */
-	if (m_textMatrix != new_text_matrix || _font_scaling != max_scale)
+	if (m_textMatrix != new_text_matrix || m_fontScaling != max_scale)
 	{
 		// I think we can change the charStyle mid text stream to account for scaling, so instead of calling _flushText we should maked a call to set cStyle
 		// I'm leaving this in here to test grouping
@@ -967,12 +967,12 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 	}
 
 	//I think font scaling should be handled outside this function like things like colour are.
-	double css_font_size = _font_scaling * state->getFontSize();
-	qDebug() << "_font_scaling: " << _font_scaling << "state->getFontSize():" << state->getFontSize();
+	double css_font_size = m_fontScaling * state->getFontSize();
+	qDebug() << "_font_scaling: " << m_fontScaling << "state->getFontSize():" << state->getFontSize();
 /*
 *	I have no idea what this is or does but it's producing some interesting results which means it's not working whatever it's supposed to do.
 */
-
+#if 0
 	if (font != 0)
 	{
 		if (font->getType() == fontType3)
@@ -984,7 +984,7 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 			}
 		}
 	}
-
+#endif
 	m_pdfGlyphStyle.font.setPointSizeF(css_font_size);
 
 
@@ -1001,7 +1001,7 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 		qDebug() << "Font has changed .. " << origional_font_style.key() << "  " << origional_font_style.toString() << endl;
 		m_invalidatedStyle = true;
 	}
-	m_pdfGlyphStyle.font.setPointSize(10);
+	//m_pdfGlyphStyle.font.setPointSize(state->getFontSize());
 	m_pdfTextRecognition.setPdfGlyphStyleFont(m_pdfGlyphStyle.font);
 	//FIXME: Some work needs to  be done to determine the correct addCharMode to set. but with new styles should always work even if it's not optimal.
 	
