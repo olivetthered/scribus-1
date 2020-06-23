@@ -32,7 +32,7 @@ public:
 struct PdfGlyphStyle
 {
 public:
-	QFont font;
+	QFont font = {};
 	bool  fill;
 	bool stroke;
 	double rotation = { 0.0 };
@@ -72,7 +72,7 @@ public:
 	int glyphIndex = {};
 	QPointF baseOrigin = QPointF({}, {});
 	std::vector<PdfTextRegionLine> segments = std::vector<PdfTextRegionLine>();
-	PdfGlyphStyle pdfGlyphStyle = {};
+	PdfGlyphStyle pdfGlyphStyle = { PdfGlyphStyle() };
 
 };
 
@@ -173,6 +173,7 @@ public:
 	bool isNewLineOrRegion(QPointF newPosition);
 	void setFillColour(QString fillColour);
 	void setStrokeColour(QString strokleColour);
+	void setPdfGlyphStyleFont(QFont font);
 private:
 	std::vector<PdfTextRegion> m_pdfTextRegions = std::vector<PdfTextRegion>();
 	AddCharMode m_addCharMode = AddCharMode::ADDCHARWITHBASESTLYE;

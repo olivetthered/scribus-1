@@ -88,6 +88,11 @@ void PdfTextRecognition::setStrokeColour(QString strokleColour)
 	setCharMode(AddCharMode::ADDCHARWITHNEWSTYLE);
 }
 
+void PdfTextRecognition::setPdfGlyphStyleFont(QFont font)
+{
+	m_pdfGlyphStyle.font = font;
+}
+
 
 /*
 *	basic functionality to be performed when addChar is called
@@ -152,7 +157,8 @@ PdfGlyph PdfTextRecognition::AddCharWithNewStyle(GfxState* state, double x, doub
 	//activePdfTextRegion.lastXY = QPointF(x, y);
 	activePdfTextRegion.glyphs.push_back(newGlyph);
 	setCharMode(AddCharMode::ADDBASICCHAR);
-	
+	QFont font = m_pdfGlyphStyle.font;
+	qDebug() << "AddCharWithNewStyle: font family:" << font.family() << " font.toString " << font.toString() << " font.pointSizeF():" << font.pointSizeF();
 	activePdfTextRegion.SetNewFontAndStyle(&m_pdfGlyphStyle);
 	auto success = activePdfTextRegion.moveToPoint(QPointF{ x, y });
 	if (success == PdfTextRegion::LineType::FAIL)
@@ -185,6 +191,8 @@ PdfGlyph PdfTextRecognition::AddCharWithBaseStyle(GfxState* state, double x, dou
 	//qDebug() << "AddFirstChar() '" << u << " : " << uLen;
 	PdfGlyph newGlyph = PdfTextRecognition::AddCharCommon(state, x, y, dx, dy, u, uLen);	
 	setCharMode(AddCharMode::ADDBASICCHAR);
+	QFont font = m_pdfGlyphStyle.font;
+	qDebug() << "AddCharWithBaseStyle: font family:" << font.family() << " font.toString " << font.toString() << " font.pointSizeF():" << font.pointSizeF();
 	activePdfTextRegion.SetNewFontAndStyle(&m_pdfGlyphStyle);
 	auto success = activePdfTextRegion.moveToPoint(QPointF(x, y));
 	activePdfTextRegion.glyphs.push_back(newGlyph);
@@ -423,6 +431,8 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 		segment->pdfGlyphStyle = *m_newFontStyleToApply;
 		if (pdfTextRegionLine->segments.size() == 1)
 			pdfTextRegionLine->pdfGlyphStyle = *m_newFontStyleToApply;
+		QFont font = pdfTextRegionLine->pdfGlyphStyle.font;
+		qDebug() << "aetnewfontandstyle: font family:" << font.family() << " font.toString " << font.toString() << " font.pointSizeF():" << font.pointSizeF();
 		m_newFontStyleToApply = nullptr;
 	}
 	else if (pdfTextRegionLine->segments.size() > 1)
@@ -457,15 +467,15 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 */
 void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 {
-	
+	QFont font = pdfTextRegionLines.front().pdfGlyphStyle.font;
 	SlaOutputDev::applyTextStyle(textNode, pdfTextRegionLines.front().pdfGlyphStyle.font.family(), 
 		pdfTextRegionLines.front().pdfGlyphStyle.currColorFill,
 		pdfTextRegionLines.front().pdfGlyphStyle.font.pointSizeF());
-	
+	qDebug() << "font family:" << font.family() << " font.toString " << font.toString() << " font.pointSizeF():" << font.pointSizeF();
 	textNode->setWidthHeight(this->maxWidth, this->maxHeight);
 	
 	QString bodyText = "";
-	for (int glyphIndex = this->pdfTextRegionLines.begin()->glyphIndex; glyphIndex <= this->pdfTextRegionLines.back().segments.back().glyphIndex; glyphIndex++)
+	for (int glyphIndex = this->pdfTextRegionLines.front().glyphIndex; glyphIndex <= this->pdfTextRegionLines.back().segments.back().glyphIndex; glyphIndex++)
 		bodyText += glyphs[glyphIndex].code;
 
 	textNode->itemText.insertChars(bodyText);
@@ -483,6 +493,8 @@ bool PdfTextRegion::isNew()
 
 void PdfTextRegion::SetNewFontAndStyle(PdfGlyphStyle* fontStyle)
 {
+	QFont font = fontStyle->font;
+	qDebug() << "aetnewfontandstyle: font family:" << font.family() << " font.toString " << font.toString() << " font.pointSizeF():" << font.pointSizeF();
 	m_newFontStyleToApply = fontStyle;
 }
 
@@ -655,7 +667,7 @@ void PdfTextOutputDev::renderTextFrame()
 	QString CurrColorText = CurrColorFill;//CurrFillShade;// getColor(state->getFillColorSpace(), state->getFillColor(), &shade);
 	//applyTextStyleToCharStyle(pStyle.charStyle(), _glyphs[0].style->getFont().family(), CurrColorText, _glyphs[0].style->getFont().pointSizeF());// *_font_scaling);
 	
-	applyTextStyle(textNode, activePdfTextRegion->pdfTextRegionLines.begin()->pdfGlyphStyle.font.family(), CurrColorText, activePdfTextRegion->pdfTextRegionLines.begin()->pdfGlyphStyle.font.pointSizeF());
+	//applyTextStyle(textNode, activePdfTextRegion->pdfTextRegionLines.begin()->pdfGlyphStyle.font.family(), CurrColorText, activePdfTextRegion->pdfTextRegionLines.begin()->pdfGlyphStyle.font.pointSizeF());
 	/*/
 	CharStyle& cStyle = static_cast<CharStyle&>(pStyle.charStyle());
 	cStyle.setScaleH(1000.0);
@@ -790,7 +802,7 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 	if (m_pdfTextRecognition.activePdfTextRegion.isNew())
 		m_lastFontSpecification = "Were in a new regon";
 	QFont origional_font_style = m_pdfGlyphStyle.font;
-	qDebug() << "origional_font_style:" << origional_font_style;
+	qDebug() << "origional_font_style:" << origional_font_style.toString();
 	qDebug() << "m_lastFontSpecification:" << m_lastFontSpecification;
 
 	GfxFont* font = state->getFont();
@@ -989,6 +1001,8 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 		qDebug() << "Font has changed .. " << origional_font_style.key() << "  " << origional_font_style.toString() << endl;
 		m_invalidatedStyle = true;
 	}
+	m_pdfGlyphStyle.font.setPointSize(10);
+	m_pdfTextRecognition.setPdfGlyphStyleFont(m_pdfGlyphStyle.font);
 	//FIXME: Some work needs to  be done to determine the correct addCharMode to set. but with new styles should always work even if it's not optimal.
 	
 		//ADDCHARWITHPREVIOUSSTYLE,
