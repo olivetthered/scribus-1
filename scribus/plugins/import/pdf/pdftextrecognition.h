@@ -173,6 +173,7 @@ public:
 	bool isNewLineOrRegion(QPointF newPosition);
 	void setFillColour(QString fillColour);
 	void setStrokeColour(QString strokleColour);
+	void setPdfGlyphStyleFont(QFont font);
 private:
 	std::vector<PdfTextRegion> m_pdfTextRegions = std::vector<PdfTextRegion>();
 	AddCharMode m_addCharMode = AddCharMode::ADDCHARWITHBASESTLYE;
@@ -220,10 +221,9 @@ private:
 	bool m_invalidatedStyle = true;
 	QString m_lastFontSpecification = {};
 	QTransform m_textMatrix = {};
-	double m_fontScaling = {};
+	double m_fontScaling = { 1.0 };
 	bool m_needFontUpdate = true;
 	QStringList m_availableFontNames = {};
-	double _font_scaling = { 1.0 };
 };
 
 /**
