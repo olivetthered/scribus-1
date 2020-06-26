@@ -946,8 +946,45 @@ void SlaOutputDev::applyTextStyle(PageItem* ite, const QString& fontName, const 
 	}
 	ParagraphStyle dstyle(ite->itemText.defaultStyle());
 	dstyle.charStyle().applyCharStyle(newStyle);
+	
 	ite->itemText.setDefaultStyle(dstyle);
 	ite->itemText.applyCharStyle(0, ite->itemText.length(), newStyle);
+	ite->invalid = true;
+}
+
+void SlaOutputDev::applyTextStyle(PageItem* ite, const QString& fontName, const QString& textColor, double fontSize, int pos, int len)
+{
+	CharStyle newStyle;
+	newStyle.setFillColor(textColor);
+	newStyle.setFontSize(fontSize * 10);
+	if (!fontName.isEmpty())
+	{
+		SCFontsIterator it(*ite->doc()->AllFonts);
+		for (; it.hasNext(); it.next())
+		{
+			ScFace& face(it.current());
+			if ((face.psName() == fontName) && (face.usable()) && (face.type() == ScFace::TTF))
+			{
+				newStyle.setFont(face);
+				break;
+			}
+			if ((face.family() == fontName) && (face.usable()) && (face.type() == ScFace::TTF))
+			{
+				newStyle.setFont(face);
+				break;
+			}
+			if ((face.scName() == fontName) && (face.usable()) && (face.type() == ScFace::TTF))
+			{
+				newStyle.setFont(face);
+				break;
+			}
+		}
+	}
+	ParagraphStyle dstyle(ite->itemText.defaultStyle());
+	//dstyle.charStyle().applyCharStyle(newStyle);
+
+	//ite->itemText.setDefaultStyle(dstyle);
+	ite->itemText.applyCharStyle(pos, len, newStyle);
 	ite->invalid = true;
 }
 
