@@ -32,7 +32,7 @@ public:
 struct PdfGlyphStyle
 {
 public:
-	QFont font;
+	QFont font = {};
 	bool  fill;
 	bool stroke;
 	double rotation = { 0.0 };
@@ -72,7 +72,7 @@ public:
 	int glyphIndex = {};
 	QPointF baseOrigin = QPointF({}, {});
 	std::vector<PdfTextRegionLine> segments = std::vector<PdfTextRegionLine>();
-	PdfGlyphStyle pdfGlyphStyle = {};
+	PdfGlyphStyle pdfGlyphStyle = { PdfGlyphStyle() };
 
 };
 
