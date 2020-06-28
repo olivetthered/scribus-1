@@ -133,6 +133,7 @@ public:
 	bool isNew();
 private:
 	PdfGlyphStyle* m_newFontStyleToApply = nullptr;          
+	PdfTextRegion::LineType m_lastMode = PdfTextRegion::LineType::FIRSTPOINT;
 };
 
 class PdfTextRecognition
@@ -170,6 +171,7 @@ public:
 	PdfTextRegion&& activePdfTextRegion = PdfTextRegion(); //faster and cleaner than calling back on the vector all the time.
 	void addPdfTextRegion();
 	void addChar(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, POPPLER_CONST_082 Unicode* u, int uLen);
+	bool isChangeOnSameLine(QPointF newPosition);
 	bool isNewLineOrRegion(QPointF newPosition);
 	void setFillColour(QString fillColour);
 	void setStrokeColour(QString strokleColour);
