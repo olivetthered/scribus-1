@@ -37,8 +37,8 @@ public:
 	bool stroke;
 	double rotation = { 0.0 };
 	int    charset = { 1 };
-	QString currColorFill = { "black" };
-	QString currColorStroke = { "black" };
+	QString currColorFill = { "0x00000000" };
+	QString currColorStroke = { "0x00000000" };
 	int currStrokeShade{ 100 };
 	QString toString(void) 
 	{

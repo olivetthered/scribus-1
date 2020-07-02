@@ -369,6 +369,7 @@ PdfTextRegion::LineType PdfTextRegion::moveToPoint(QPointF newPoint)
 		qDebug() << "LineType::NEWLINE  LineType::FIRSTPOINT:" << (mode == LineType::NEWLINE ? "newline" : "FIRSTPOINT") << "pdfTextRegionLine->glyphIndex:" << pdfTextRegionLine->glyphIndex << " glyphs.size()" << glyphs.size();
 		pdfTextRegionLine->glyphIndex = glyphs.size();
 		pdfTextRegionLine->baseOrigin = newPoint;
+		lineBaseXY = newPoint;
 		if (mode == LineType::NEWLINE)
 		{
 			pdfTextRegionLine->maxHeight = abs(newPoint.y() - lastXY.y());
@@ -754,11 +755,12 @@ void PdfTextOutputDev::updateTextPos(GfxState* state)
 	PdfTextRegion::LineType linePdfTestResult = activePdfTextRegion->moveToPoint(newPosition);
 	if(linePdfTestResult == PdfTextRegion::LineType::STYLENORMALRETURN)
 	{
+		qDebug() << "PdfTextRegion::LineType::STYLENORMALRETURN";
 		this->m_pdfTextRecognition.setCharMode(PdfTextRecognition::AddCharMode::ADDCHARWITHBASESTLYE);
 	} 
 	else if (linePdfTestResult == PdfTextRegion::LineType::SAMELINE || linePdfTestResult== PdfTextRegion::LineType::STYLESUPERSCRIPT)
 	{
-		m_pdfTextRecognition.setCharMode(PdfTextRecognition::AddCharMode::ADDFIRSTCHAR);
+		m_pdfTextRecognition.setCharMode(PdfTextRecognition::AddCharMode::ADDCHARWITHBASESTLYE);
 	}
 	else if (linePdfTestResult == PdfTextRegion::LineType::FAIL)
 	{
@@ -969,6 +971,8 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 	if (m_pdfTextRecognition.activePdfTextRegion.isNew())
 		m_lastFontSpecification = "Were in a new region";
 	m_previouisGlyphStyle = m_pdfGlyphStyle;
+	qDebug() << "m_previouisGlyphStyle: currColorFill:" << m_previouisGlyphStyle.currColorFill << "colourstroke" << m_previouisGlyphStyle.currColorStroke;
+	qDebug() << "fill:" << state->getFillColor() << "stroke" << state->getStrokeColor();
 	QFont origional_font_style = m_pdfGlyphStyle.font;
 #ifdef DEBUG_TEXT_IMPORT_FONTS
 	qDebug() << "origional_font_style:" << origional_font_style.toString();
@@ -1177,6 +1181,9 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 #endif
 		m_invalidatedStyle = true;
 	}
+	m_pdfTextRecognition.setFillColour(m_pdfGlyphStyle.currColorFill);
+	m_pdfTextRecognition.setStrokeColour(m_pdfGlyphStyle.currColorStroke);	
+	qDebug() << "currColorFill:" << m_pdfGlyphStyle.currColorFill << "currColorStroke" << m_pdfGlyphStyle.currColorStroke;
 	//updateFillColor(state);
 	//updateStrokeColor(state);
 	m_pdfTextRecognition.setPdfGlyphStyleFont(m_pdfGlyphStyle.font);
@@ -1186,13 +1193,17 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 void PdfTextOutputDev::updateFillColor(GfxState* state)
 {
 	SlaOutputDev::updateFillColor(state);
-	this->m_pdfTextRecognition.setFillColour(CurrColorFill);
+	qDebug() << "updateFillColor:" << CurrColorFill;
+	m_pdfGlyphStyle.currColorFill = CurrColorFill;
+	m_pdfTextRecognition.setFillColour(CurrColorFill);
 }
 
 void PdfTextOutputDev::updateStrokeColor(GfxState* state) 
 {
 	SlaOutputDev::updateStrokeColor(state);
-	this->m_pdfTextRecognition.setStrokeColour(CurrColorStroke);
+	qDebug() << "updateStrokeColor:" << CurrColorStroke;
+	m_pdfGlyphStyle.currColorStroke = CurrColorStroke;
+	m_pdfTextRecognition.setStrokeColour(CurrColorStroke);
 }
 
 /*
