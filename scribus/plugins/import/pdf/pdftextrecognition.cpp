@@ -399,6 +399,7 @@ PdfTextRegion::LineType PdfTextRegion::moveToPoint(QPointF newPoint)
 	}
 
 	maxHeight = abs(pdfTextRegionBasenOrigin.y() - newPoint.y()) > maxHeight ? abs(pdfTextRegionBasenOrigin.y() - newPoint.y()) : maxHeight;
+	
 	lastXY = newPoint;
 	m_lastMode = mode;
 	return mode;
@@ -421,7 +422,8 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 	QPointF movedGlyphPoint = QPointF(newGlyphPoint.x() + newGlyph.dx, newGlyphPoint.y() + newGlyph.dy);
 	if (glyphs.size() == 1)
 	{
-		lineSpacing = newGlyph.dx * 3;
+		QFontMetrics qFontMetrics = QFontMetrics(m_newFontStyleToApply->font);
+		lineSpacing = qFontMetrics.height();
 		lastXY = newGlyphPoint;
 		lineBaseXY = newGlyphPoint;
 	}
@@ -447,15 +449,12 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 	PdfTextRegionLine* segment = &pdfTextRegionLine->segments.back();
 	segment->width = abs(movedGlyphPoint.x() - segment->baseOrigin.x());
 	segment->glyphIndex = glyphs.size() - 1;
-	if (m_newFontStyleToApply)
-	{
+	if (m_newFontStyleToApply)	
 		segment->pdfGlyphStyle = *m_newFontStyleToApply;
-	}
 
 	qreal thisHeight = pdfTextRegionLines.size() > 1 ?
 		abs(newGlyphPoint.y() - pdfTextRegionLines[pdfTextRegionLines.size() - 2].baseOrigin.y()) :
 		newGlyph.dx;
-
 	segment->maxHeight = thisHeight > segment->maxHeight ? thisHeight : segment->maxHeight;
 	pdfTextRegionLine->maxHeight = pdfTextRegionLine->maxHeight > thisHeight ? pdfTextRegionLine->maxHeight : thisHeight;
 	pdfTextRegionLine->width = abs(movedGlyphPoint.x() - pdfTextRegionLine->baseOrigin.x());
@@ -987,7 +986,7 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 
 	m_pdfGlyphStyle.font.setPointSizeF(css_font_size);
 
-	m_pdfGlyphStyle.font.resolve();#
+	m_pdfGlyphStyle.font.resolve();
 #ifdef DEBUG_TEXT_IMPORT_FONTS
 	if (m_pdfGlyphStyle.font.key() == origional_font_style.key() || m_pdfGlyphStyle.font.toString() == origional_font_style.toString())
 	{
