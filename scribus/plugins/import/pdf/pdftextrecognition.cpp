@@ -9,6 +9,7 @@ for which a new license (GPL+exception) is in place.
 
 #ifndef DEBUG_TEXT_IMPORT
 	#define DEBUG_TEXT_IMPORT
+	#define DEBUG_TEXT_IMPORT_FONTS
 #endif
 #include <qfontdatabase.h>
 
@@ -75,10 +76,11 @@ bool PdfTextRecognition::isChangeOnSameLine(QPointF newPosition)
 */
 bool PdfTextRecognition::isNewLineOrRegion(QPointF newPosition)
 {
-	return ((activePdfTextRegion.collinear(activePdfTextRegion.lastXY.y(), activePdfTextRegion.pdfTextRegionLines.back().baseOrigin.y()) &&
-		!activePdfTextRegion.collinear(newPosition.y(), activePdfTextRegion.lastXY.y())) ||
-		activePdfTextRegion.collinear(newPosition.y(), activePdfTextRegion.lastXY.y())
-			&& !activePdfTextRegion.isCloseToX(newPosition.x(), activePdfTextRegion.lastXY.x()));
+	auto lineRelationship = activePdfTextRegion.isRegionConcurrent(newPosition);
+	return lineRelationship == PdfTextRegion::LineType::NEWLINE || lineRelationship == PdfTextRegion::LineType::ENDOFLINE || lineRelationship == PdfTextRegion::LineType::FAIL;//((activePdfTextRegion.collinear(activePdfTextRegion.lastXY.y(), activePdfTextRegion.pdfTextRegionLines.back().baseOrigin.y()) &&
+		//!activePdfTextRegion.collinear(newPosition.y(), activePdfTextRegion.lastXY.y())) ||
+		//activePdfTextRegion.collinear(newPosition.y(), activePdfTextRegion.lastXY.y())
+			//&& !activePdfTextRegion.isCloseToX(newPosition.x(), activePdfTextRegion.lastXY.x()));
 }
 
 void PdfTextRecognition::setFillColour(QString fillColour)
@@ -96,6 +98,7 @@ void PdfTextRecognition::setStrokeColour(QString strokleColour)
 void PdfTextRecognition::setPdfGlyphStyleFont(QFont font)
 {
 	m_pdfGlyphStyle.font = font;
+	setCharMode(AddCharMode::ADDCHARWITHNEWSTYLE);
 }
 
 /*
@@ -195,7 +198,7 @@ PdfGlyph PdfTextRecognition::AddCharWithBaseStyle(GfxState* state, double x, dou
 	PdfGlyph newGlyph = PdfTextRecognition::AddCharCommon(state, x, y, dx, dy, u, uLen);	
 	setCharMode(AddCharMode::ADDBASICCHAR);
 	auto success = activePdfTextRegion.moveToPoint(QPointF(x, y));
-	activePdfTextRegion.SetNewFontAndStyle(&m_pdfGlyphStyle);	
+	activePdfTextRegion.SetNewFontAndStyle(&m_pdfGlyphStyle);
 	activePdfTextRegion.glyphs.push_back(newGlyph);
 	//only need to be called for the very first point
 	success = activePdfTextRegion.addGlyphAtPoint(QPointF(x, y), newGlyph);
@@ -327,7 +330,7 @@ PdfTextRegion::LineType PdfTextRegion::isRegionConcurrent(QPointF newPoint)
 *	Move the position of the cursor to a new point,
 *	test if that point is within the current textframe or within a new textframe.
 *	initialize the textregion and setup lines and segments
-*	TODO: iscloseto x and y may need to be different from addGlyph but use thge common isRegionbConcurrent for now
+*	TODO: iscloseto x and y may need to be different from addGlyph but use the common isRegionbConcurrent for now
 *		need to check to see if we are creating a new paragraph or not.
 *		basically if the cursor is returned to x origin before it reached x width.
 *		Also needs to have support for rotated text, but I expect I'll add this by removing the text rotation
@@ -345,6 +348,11 @@ PdfTextRegion::LineType PdfTextRegion::moveToPoint(QPointF newPoint)
 	if (mode == LineType::FAIL)
 		return mode;
 
+	if (mode == LineType::FIRSTPOINT && glyphs.size() != 0)
+	{
+		mode = LineType::SAMELINE;
+	}
+
 	// have we been called twice with no change
 	if (!pdfTextRegionLines.empty() && pdfTextRegionLines.back().segments.back().glyphIndex >= glyphs.size() - 1 && lastXY == newPoint)
 	{
@@ -357,8 +365,8 @@ PdfTextRegion::LineType PdfTextRegion::moveToPoint(QPointF newPoint)
 	{
 		if (mode != LineType::FIRSTPOINT || pdfTextRegionLines.empty())
 			pdfTextRegionLines.push_back(PdfTextRegionLine());
-
 		pdfTextRegionLine = &pdfTextRegionLines.back();
+		qDebug() << "LineType::NEWLINE  LineType::FIRSTPOINT:" << (mode == LineType::NEWLINE ? "newline" : "FIRSTPOINT") << "pdfTextRegionLine->glyphIndex:" << pdfTextRegionLine->glyphIndex << " glyphs.size()" << glyphs.size();
 		pdfTextRegionLine->glyphIndex = glyphs.size();
 		pdfTextRegionLine->baseOrigin = newPoint;
 		if (mode == LineType::NEWLINE)
@@ -372,26 +380,22 @@ PdfTextRegion::LineType PdfTextRegion::moveToPoint(QPointF newPoint)
 	pdfTextRegionLine = &pdfTextRegionLines.back();
 	if (mode != LineType::FIRSTPOINT && mode != LineType::NEWLINE && pdfTextRegionLines.back().segments.back().glyphIndex < glyphs.size() - 1)
 	{
+		qDebug() << ".segments.back().glyphIndex = glyphs.size() - 1" << glyphs.size();
 		pdfTextRegionLines.back().segments.back().glyphIndex = glyphs.size() - 1;
 	}
 	if ((mode == LineType::FIRSTPOINT && pdfTextRegionLine->segments.empty()) || mode == LineType::NEWLINE
 		|| mode != LineType::FIRSTPOINT && pdfTextRegionLine->segments[0].glyphIndex != pdfTextRegionLine->glyphIndex)
 	{
 		PdfTextRegionLine newSegment = PdfTextRegionLine{};
+		qDebug() << "newsegment" << glyphs.size();
 		newSegment.glyphIndex = glyphs.size();
 		pdfTextRegionLine->segments.push_back(newSegment);
 
-		//if (!pdfTextRegionLine->segments.empty())
-		//{
 		if (pdfTextRegionLines.size() > 1 && pdfTextRegionLine->segments.size() == 1)
 		{
 			pdfTextRegionLine->pdfGlyphStyle = pdfTextRegionLines[pdfTextRegionLines.size() - 2].segments.back().pdfGlyphStyle;	
 			pdfTextRegionLine->segments.back().pdfGlyphStyle = pdfTextRegionLine->pdfGlyphStyle;
 		}
-			//pdfTextRegionLine->segments.back().pdfGlyphStyle = pdfTextRegionLine->pdfGlyphStyle;
-			//pdfTextRegionLine->segments.back().glyphIndex = glyphs.size() - 1;
-		//}
-		
 	}
 #if 0
 	else if(mode != LineType::FIRSTPOINT && pdfTextRegionLine->segments[0].glyphIndex == pdfTextRegionLine->glyphIndex)
@@ -461,6 +465,11 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 	if (mode == LineType::FAIL)
 		return mode;
 
+	if (mode == LineType::FIRSTPOINT && glyphs.size() > 1)
+	{
+		mode = LineType::SAMELINE;
+	}
+
 	maxHeight = abs(pdfTextRegionBasenOrigin.y() - movedGlyphPoint.y()) + lineSpacing > maxHeight ? abs(pdfTextRegionBasenOrigin.y() - movedGlyphPoint.y()) + lineSpacing : maxHeight;
 
 	PdfTextRegionLine* pdfTextRegionLine = &pdfTextRegionLines.back();
@@ -473,16 +482,25 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 
 	PdfTextRegionLine* segment = &pdfTextRegionLine->segments.back();
 	segment->width = abs(movedGlyphPoint.x() - segment->baseOrigin.x());
+	qDebug() << "addnewglyph glyphs.size() - 1 " << glyphs.size() - 1;
 	segment->glyphIndex = glyphs.size() - 1;
 	if (m_newFontStyleToApply)
 	{
-		segment->pdfGlyphStyle = *m_newFontStyleToApply;
-		if (pdfTextRegionLine->segments.size() == 1)
-			pdfTextRegionLine->pdfGlyphStyle = *m_newFontStyleToApply;
-		QFont font = pdfTextRegionLine->pdfGlyphStyle.font;
-		qDebug() << "aetnewfontandstyle: font family:" << font.family() << " font.toString " << font.toString() << " font.pointSizeF():" << font.pointSizeF();
-		m_newFontStyleToApply = nullptr;
+		segment->pdfGlyphStyle.charset = m_newFontStyleToApply->charset;
+		segment->pdfGlyphStyle.currColorFill = m_newFontStyleToApply->currColorFill;
+		segment->pdfGlyphStyle.currColorStroke = m_newFontStyleToApply->currColorStroke;
+		segment->pdfGlyphStyle.currStrokeShade = m_newFontStyleToApply->currStrokeShade;
+		segment->pdfGlyphStyle.fill = m_newFontStyleToApply->fill;
+		segment->pdfGlyphStyle.font.fromString(m_newFontStyleToApply->font.toString());
+		segment->pdfGlyphStyle.rotation = m_newFontStyleToApply->rotation;
+		segment->pdfGlyphStyle.stroke = m_newFontStyleToApply->stroke;
+		//if(pdfTextRegionLine->segments.size() == 1)
+		//pdfTextRegionLine->pdfGlyphStyle = *m_newFontStyleToApply;
+		QFont font = segment->pdfGlyphStyle.font;
+		qDebug() << "newfontandstyle: font family:" << font.family() << " font.toString " << font.toString() << " font.pointSizeF():" << font.pointSizeF();
+		//m_newFontStyleToApply = nullptr;
 	}
+	/*
 	else if (pdfTextRegionLine->segments.size() > 1)
 		segment->pdfGlyphStyle = pdfTextRegionLine->segments[pdfTextRegionLine->segments.size() - 2].pdfGlyphStyle;
 	else if (mode == LineType::NEWLINE)
@@ -492,6 +510,7 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 	}
 	else
 		segment->pdfGlyphStyle = pdfTextRegionLine->pdfGlyphStyle;
+	*/
 
 	qreal thisHeight = pdfTextRegionLines.size() > 1 ?
 		abs(newGlyphPoint.y() - pdfTextRegionLines[pdfTextRegionLines.size() - 2].baseOrigin.y()) :
@@ -540,10 +559,9 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 	baseParagraphStyle->setLineSpacingMode(ParagraphStyle::LineSpacingMode::FixedLineSpacing);
 	baseParagraphStyle->setLineSpacing(this->lineSpacing * 0.75);
 	textNode->changeCurrentStyle() = *baseParagraphStyle;
-	//textNode->changeCurrentStyle();
 	
 	textNode->setWidthHeight(this->maxWidth, this->maxHeight);
-//this should really just set all the text and then use the segments to set the correct fonty and style for ranges of text
+//this should really just set all the text and then use the segments to set the correct font and style for ranges of text
 	QString bodyText = "";
 	auto itterator = this->pdfTextRegionLines.begin();
 	for (int i = 0; i < pdfTextRegionLines.size(); i++)
@@ -555,8 +573,8 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 			bodyText += glyphs[glyphIndex].code;
 		}
 		textNode->itemText.insertChars(bodyText);
-#ifdef DEBUG_TEXT_IMPORT_FONTS
-		qDebug() << bodyText<< "font family:" << font.family() << " font.toString " << font.toString() << " font.pointSizeF():" << font.pointSizeF() << "Index:"<< pdfTextRegionLines[i].glyphIndex<<"Length:" << (pdfTextRegionLines[i].segments[0].glyphIndex - pdfTextRegionLines[i].glyphIndex) + 1;
+		#if 1
+		qDebug() << bodyText<< "font family:" << font.family() << " font.toString " << font.toString() << " font.pointSizeF():" << font.pointSizeF() << "Index:"<< pdfTextRegionLines[i].glyphIndex<<"Length:" << (pdfTextRegionLines[i].segments[0].glyphIndex - pdfTextRegionLines[i].glyphIndex);
 #endif
 		SlaOutputDev::applyTextStyle(textNode, pdfTextRegionLines[i].segments[0].pdfGlyphStyle.font.family(),
 			pdfTextRegionLines[i].segments[0].pdfGlyphStyle.currColorFill,
@@ -575,14 +593,13 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 			textNode->itemText.insertChars(bodyText);
 
 			//QFont font = pdfTextRegionLines[i].segments[j + 1].pdfGlyphStyle.font;
-#ifdef DEBUG_TEXT_IMPORT_FONTS
-			qDebug() << "font family:" << font.family() << " font.toString " << font.toString() << " font.pointSizeF():" << font.pointSizeF() << "Index:" << pdfTextRegionLines[i].segments[j - 1].glyphIndex << "i:"<< i <<"j:"<<j<< "Length:" << (pdfTextRegionLines[i].segments[j].glyphIndex - pdfTextRegionLines[i].segments[j - 1].glyphIndex) + 1;
+			#if 1
+			qDebug() << bodyText << "font family:" << font.family() << " font.toString " << font.toString() << " font.pointSizeF():" << font.pointSizeF() << "Index:" << pdfTextRegionLines[i].segments[j - 1].glyphIndex << "i:"<< i <<"j:"<<j<< "Length:" << (pdfTextRegionLines[i].segments[j].glyphIndex - pdfTextRegionLines[i].segments[j - 1].glyphIndex);
 #endif
 			SlaOutputDev::applyTextStyle(textNode, pdfTextRegionLines[i].segments[j].pdfGlyphStyle.font.family(),
 				pdfTextRegionLines[i].segments[j].pdfGlyphStyle.currColorFill,
 				pdfTextRegionLines[i].segments[j].pdfGlyphStyle.font.pointSizeF(),
-				pdfTextRegionLines[i].segments[j - 1].glyphIndex, (pdfTextRegionLines[i].segments[j].glyphIndex - pdfTextRegionLines[i].segments[j - 1].glyphIndex) + 1);
-			
+				pdfTextRegionLines[i].segments[j - 1].glyphIndex + 1, (pdfTextRegionLines[i].segments[j].glyphIndex - pdfTextRegionLines[i].segments[j - 1].glyphIndex));
 		}
 
 	}
@@ -611,7 +628,9 @@ bool PdfTextRegion::isNew()
 void PdfTextRegion::SetNewFontAndStyle(PdfGlyphStyle* fontStyle)
 {
 	QFont font = fontStyle->font;
+	qDebug() << font.toString();
 	m_newFontStyleToApply = fontStyle;
+	m_newFontStyleToApply->font = font;
 }
 
 
@@ -677,6 +696,7 @@ void PdfTextOutputDev::updateTextMat(GfxState* state)
 #ifdef DEBUG_TEXT_IMPORT_FONTS
 		qDebug() << "Rescaling the font, " << max_scale << " this should no longer need to call or trigger update font inseted it should set the correct addchar mode";
 #endif
+		updateFont(state);
 		//m_lastFontSpecification = "invalid";
 	}
 
@@ -708,6 +728,8 @@ void PdfTextOutputDev::updateTextPos(GfxState* state)
 			activePdfTextRegion->lastXY.setX(activePdfTextRegion->lastXY.x() - activePdfTextRegion->glyphs.back().dx);
 			PdfGlyph pdfGlyph = activePdfTextRegion->glyphs.back();
 			//activePdfTextRegion->glyphs.pop_back();
+			//FIXME: have to stop the font and style leaking over bAckwards to the previous segment.
+			activePdfTextRegion->SetNewFontAndStyle(&this->m_previouisGlyphStyle);
 			if (activePdfTextRegion->addGlyphAtPoint(glyphPosition, activePdfTextRegion->glyphs.back()) == PdfTextRegion::LineType::FAIL)
 				qDebug("FIXME: Rogue glyph detected, this should never happen because the cursor should move before glyphs in new regions are added.");
 #ifdef DEBUG_TEXT_IMPORT
@@ -942,10 +964,11 @@ static void DumpFont(GfxFont*font)
 void PdfTextOutputDev::updateFont(GfxState* state)
 {
 	//qDebug() << "updateFontForText() TEST"
-	updateTextMat(state);    // Ensure that we have a text matrix built
+	//updateTextMat(state);    // Ensure that we have a text matrix built
 	m_needFontUpdate = false;
 	if (m_pdfTextRecognition.activePdfTextRegion.isNew())
 		m_lastFontSpecification = "Were in a new region";
+	m_previouisGlyphStyle = m_pdfGlyphStyle;
 	QFont origional_font_style = m_pdfGlyphStyle.font;
 #ifdef DEBUG_TEXT_IMPORT_FONTS
 	qDebug() << "origional_font_style:" << origional_font_style.toString();
@@ -967,9 +990,6 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 		}
 		else
 		{
-			if (1)
-			{
-			};
 		}
 	}
 	else
@@ -982,7 +1002,7 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 		}
 		else
 		{
-			return;
+			//return;
 		}
 	}
 	if (font != NULL)
@@ -1152,12 +1172,15 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 	else
 	{
 #ifdef DEBUG_TEXT_IMPORT_FONTS
-		qDebug() << "Font has changed .. " << m_pdfGlyphStyle.font.key() << "  " << m_pdfGlyphStyle.font.toString() << endl;
-		qDebug() << "Font has changed .. " << origional_font_style.key() << "  " << origional_font_style.toString() << endl;
+		qDebug() << "Font has changed to.. " << m_pdfGlyphStyle.font.key() << "  " << m_pdfGlyphStyle.font.toString() << endl;
+		qDebug() << "Font has changed from.. " << origional_font_style.key() << "  " << origional_font_style.toString() << endl;
 #endif
 		m_invalidatedStyle = true;
 	}
+	//updateFillColor(state);
+	//updateStrokeColor(state);
 	m_pdfTextRecognition.setPdfGlyphStyleFont(m_pdfGlyphStyle.font);
+	m_pdfTextRecognition.setCharMode(PdfTextRecognition::AddCharMode::ADDCHARWITHBASESTLYE);
 }
 
 void PdfTextOutputDev::updateFillColor(GfxState* state)

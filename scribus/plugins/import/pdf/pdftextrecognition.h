@@ -37,8 +37,8 @@ public:
 	bool stroke;
 	double rotation = { 0.0 };
 	int    charset = { 1 };
-	QString currColorFill;
-	QString currColorStroke;
+	QString currColorFill = { "black" };
+	QString currColorStroke = { "black" };
 	int currStrokeShade{ 100 };
 	QString toString(void) 
 	{
@@ -185,7 +185,8 @@ private:
 	PdfGlyph AddCharWithNewStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfGlyph AddCharWithPreviousStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfGlyph AddCharWithBaseStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
-	PdfGlyphStyle m_pdfGlyphStyle;
+	PdfGlyphStyle m_pdfGlyphStyle = {};
+	PdfGlyphStyle m_previousFontAndStyle = {};
 };
 
 
