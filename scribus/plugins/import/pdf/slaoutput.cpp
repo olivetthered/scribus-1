@@ -964,8 +964,12 @@ void SlaOutputDev::applyTextStyle(PageItem* ite, const QString& fontName, const 
 		for (; it.hasNext(); it.next())
 		{
 			ScFace& face(it.current());
-			if (face.isBold() == bold && face.isItalic() == italic)
-				bolditalic = true;
+			bolditalic = false;
+			if ((face.usable()) && (face.type() == ScFace::TTF))
+			{
+				if (face.isBold() == bold && face.isItalic() == italic)
+					bolditalic = true;									
+			}
 			if (bolditalic)
 			{
 				if ((face.psName() == fontName) && (face.usable()) && (face.type() == ScFace::TTF))
