@@ -153,15 +153,15 @@ public:
 
 	void setCharMode(AddCharMode mode)
 	{
-		qDebug() << "charmode is:" << static_cast<int>(m_addCharMode) << " and it's being set to:" << static_cast<int>(mode);
+		//qDebug() << "charmode is:" << static_cast<int>(m_addCharMode) << " and it's being set to:" << static_cast<int>(mode);
 		if ((m_addCharMode == AddCharMode::ADDCHARWITHNEWSTYLE || m_addCharMode == AddCharMode::ADDCHARWITHBASESTLYE) && mode == AddCharMode::ADDFIRSTCHAR)
 		{
-			qDebug() << "attempt to set addCharMode to  AddCharMode::ADDFIRSTCHAR  when it is already set to ddCharMode::ADDCHARWITHNEWSTYLE or  AddCharMode::ADDCHARWITHBASESTLYE which have a higher precedence, returning";
+			//qDebug() << "attempt to set addCharMode to  AddCharMode::ADDFIRSTCHAR  when it is already set to ddCharMode::ADDCHARWITHNEWSTYLE or  AddCharMode::ADDCHARWITHBASESTLYE which have a higher precedence, returning";
 			return;
 		}
 		if (m_addCharMode == AddCharMode::ADDCHARWITHBASESTLYE && mode == AddCharMode::ADDCHARWITHNEWSTYLE)
 		{
-			qDebug() << "attempt to set addCharMode to  AddCharMode::ADDCHARWITHNEWSTYLE  when it is already set to ddCharMode::ADDCHARWITHBASESTLYE which has a higher precedence, returning";
+			//qDebug() << "attempt to set addCharMode to  AddCharMode::ADDCHARWITHNEWSTYLE  when it is already set to ddCharMode::ADDCHARWITHBASESTLYE which has a higher precedence, returning";
 			return;
 		}
 		m_addCharMode = mode;
