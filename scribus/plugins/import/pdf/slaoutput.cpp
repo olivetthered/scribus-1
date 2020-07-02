@@ -952,9 +952,10 @@ void SlaOutputDev::applyTextStyle(PageItem* ite, const QString& fontName, const 
 	ite->invalid = true;
 }
 
-void SlaOutputDev::applyTextStyle(PageItem* ite, const QString& fontName, const QString& textColor, double fontSize, int pos, int len)
+void SlaOutputDev::applyTextStyle(PageItem* ite, const QString& fontName, const QString& textColor, double fontSize, bool bold, bool italic, int pos, int len)
 {
 	CharStyle newStyle;
+	bool bolditalic = false;
 	newStyle.setFillColor(textColor);
 	newStyle.setFontSize(fontSize * 10);
 	if (!fontName.isEmpty())
@@ -963,20 +964,25 @@ void SlaOutputDev::applyTextStyle(PageItem* ite, const QString& fontName, const 
 		for (; it.hasNext(); it.next())
 		{
 			ScFace& face(it.current());
-			if ((face.psName() == fontName) && (face.usable()) && (face.type() == ScFace::TTF))
+			if (face.isBold() == bold && face.isItalic() == italic)
+				bolditalic = true;
+			if (bolditalic)
 			{
-				newStyle.setFont(face);
-				break;
-			}
-			if ((face.family() == fontName) && (face.usable()) && (face.type() == ScFace::TTF))
-			{
-				newStyle.setFont(face);
-				break;
-			}
-			if ((face.scName() == fontName) && (face.usable()) && (face.type() == ScFace::TTF))
-			{
-				newStyle.setFont(face);
-				break;
+				if ((face.psName() == fontName) && (face.usable()) && (face.type() == ScFace::TTF))
+				{
+					newStyle.setFont(face);
+					break;
+				}
+				if ((face.family() == fontName) && (face.usable()) && (face.type() == ScFace::TTF))
+				{
+					newStyle.setFont(face);
+					break;
+				}
+				if ((face.scName() == fontName) && (face.usable()) && (face.type() == ScFace::TTF))
+				{
+					newStyle.setFont(face);
+					break;
+				}
 			}
 		}
 	}

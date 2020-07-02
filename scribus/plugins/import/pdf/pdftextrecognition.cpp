@@ -490,9 +490,13 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 			bodyText += glyphs[glyphIndex].code;
 		}
 		textNode->itemText.insertChars(bodyText);
+		
+		
 		SlaOutputDev::applyTextStyle(textNode, pdfTextRegionLines[i].segments[0].pdfGlyphStyle.font.family(),
 			pdfTextRegionLines[i].segments[0].pdfGlyphStyle.currColorFill,
 			pdfTextRegionLines[i].segments[0].pdfGlyphStyle.font.pointSizeF(),
+			pdfTextRegionLines[i].segments[0].pdfGlyphStyle.font.bold(),
+			pdfTextRegionLines[i].segments[0].pdfGlyphStyle.font.italic(),
 			pdfTextRegionLines[i].glyphIndex, (pdfTextRegionLines[i].segments[0].glyphIndex - pdfTextRegionLines[i].glyphIndex) + 1);
 		
 		for (int j = 1; j < (int)pdfTextRegionLines[i].segments.size(); j++)
@@ -508,6 +512,8 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 			SlaOutputDev::applyTextStyle(textNode, pdfTextRegionLines[i].segments[j].pdfGlyphStyle.font.family(),
 				pdfTextRegionLines[i].segments[j].pdfGlyphStyle.currColorFill,
 				pdfTextRegionLines[i].segments[j].pdfGlyphStyle.font.pointSizeF(),
+				pdfTextRegionLines[i].segments[0].pdfGlyphStyle.font.bold(),
+				pdfTextRegionLines[i].segments[0].pdfGlyphStyle.font.italic(),
 				pdfTextRegionLines[i].segments[j - 1].glyphIndex + 1, (pdfTextRegionLines[i].segments[j].glyphIndex - pdfTextRegionLines[i].segments[j - 1].glyphIndex));
 		}
 
