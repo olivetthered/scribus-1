@@ -128,6 +128,7 @@ public:
 	PdfTextRegion::LineType moveToPoint(QPointF newPoint);
 	PdfTextRegion::LineType addGlyphAtPoint(QPointF newGlyphPoint, PdfGlyph new_glyph);
 	void renderToTextFrame(PageItem* textNode);
+	void Merge(PdfTextRegion* regionToMergeIn);	
 	void SetNewFontAndStyle(PdfGlyphStyle* fontAndSttle);
 	std::vector<PdfGlyph> glyphs;
 	bool isNew();
@@ -140,6 +141,9 @@ class PdfTextRecognition
 {
 public:
 	PdfTextRecognition();
+	void MergeAjacentRegions();
+	int PdfTextRegionCount();
+	void ActivateTextRegion(int index);
 	~PdfTextRecognition();
 
 	enum class AddCharMode
@@ -168,7 +172,7 @@ public:
 	}
 
 
-	PdfTextRegion&& activePdfTextRegion = PdfTextRegion(); //faster and cleaner than calling back on the vector all the time.
+	PdfTextRegion *activePdfTextRegion = new PdfTextRegion(); //faster and cleaner than calling back on the vector all the time.
 	void addPdfTextRegion();
 	void addChar(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, POPPLER_CONST_082 Unicode* u, int uLen);
 	bool isChangeOnSameLine(QPointF newPosition);
@@ -177,7 +181,7 @@ public:
 	void setStrokeColour(QString strokleColour);
 	void setPdfGlyphStyleFont(QFont font);
 private:
-	std::vector<PdfTextRegion> m_pdfTextRegions = std::vector<PdfTextRegion>();
+	std::vector<PdfTextRegion*> m_pdfTextRegions = std::vector<PdfTextRegion*>();
 	AddCharMode m_addCharMode = AddCharMode::ADDCHARWITHBASESTLYE;
 	PdfGlyph AddCharCommon(GfxState* state, double x, double y, double dx, double dy, Unicode const* u, int uLen);
 	PdfGlyph AddFirstChar(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
@@ -201,13 +205,15 @@ public:
 	void updateStrokeColor(GfxState* state) override;
 
 	//----- text drawing
-	void  beginTextObject(GfxState* state) override;
-	void  endTextObject(GfxState* state) override;
-	void  drawChar(GfxState* state, double /*x*/, double /*y*/, double /*dx*/, double /*dy*/, double /*originX*/, double /*originY*/, CharCode /*code*/, int /*nBytes*/, POPPLER_CONST_082 Unicode* /*u*/, int /*uLen*/) override;
+	void beginTextObject(GfxState* state) override;
+	void endPage() override;
+	void startPage(int pagenum, GfxState* state, XRef* xref) override;
+	void endTextObject(GfxState* state) override;
+	void drawChar(GfxState* state, double /*x*/, double /*y*/, double /*dx*/, double /*dy*/, double /*originX*/, double /*originY*/, CharCode /*code*/, int /*nBytes*/, POPPLER_CONST_082 Unicode* /*u*/, int /*uLen*/) override;
 	GBool beginType3Char(GfxState* /*state*/, double /*x*/, double /*y*/, double /*dx*/, double /*dy*/, CharCode /*code*/, POPPLER_CONST_082 Unicode* /*u*/, int /*uLen*/) override;
-	void  endType3Char(GfxState* /*state*/) override;
-	void  type3D0(GfxState* /*state*/, double /*wx*/, double /*wy*/) override;
-	void  type3D1(GfxState* /*state*/, double /*wx*/, double /*wy*/, double /*llx*/, double /*lly*/, double /*urx*/, double /*ury*/) override;
+	void endType3Char(GfxState* /*state*/) override;
+	void type3D0(GfxState* /*state*/, double /*wx*/, double /*wy*/) override;
+	void type3D1(GfxState* /*state*/, double /*wx*/, double /*wy*/, double /*llx*/, double /*lly*/, double /*urx*/, double /*ury*/) override;
 	void updateTextMat(GfxState* state) override;
 	void updateTextShift(GfxState* state, double shift) override;
 	static size_t MatchingChars(QString s1, QString sp);
