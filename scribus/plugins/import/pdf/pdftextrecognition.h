@@ -211,8 +211,7 @@ public:
 	void updateTextMat(GfxState* state) override;
 	void updateTextShift(GfxState* state, double shift) override;
 	static size_t MatchingChars(QString s1, QString sp);
-	QString _bestMatchingFont(QString PDFname);
-	void _updateStyle(GfxState* state);
+	QString BestMatchingFont(QString PDFname);
 private:
 	void setFillAndStrokeForPDF(GfxState* state, PageItem* text_node);
 	void updateTextPos(GfxState* state) override;
@@ -220,8 +219,7 @@ private:
 	void finishItem(PageItem* item);
 	PdfTextRecognition m_pdfTextRecognition = {};
 	PdfGlyphStyle m_pdfGlyphStyle = {};	
-	PdfGlyphStyle m_previouisGlyphStyle = {};
-	bool m_invalidatedStyle = true;
+	PdfGlyphStyle m_previouisGlyphStyle = {};	
 	QString m_lastFontSpecification = {};
 	QTransform m_textMatrix = {};
 	double m_fontScaling = { 1.0 };
