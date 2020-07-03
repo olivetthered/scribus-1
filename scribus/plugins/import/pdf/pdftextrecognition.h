@@ -176,6 +176,7 @@ public:
 	void setFillColour(QString fillColour);
 	void setStrokeColour(QString strokleColour);
 	void setPdfGlyphStyleFont(QFont font);
+	void doBreaksAnbdSpaces(void);
 private:
 	std::vector<PdfTextRegion> m_pdfTextRegions = std::vector<PdfTextRegion>();
 	AddCharMode m_addCharMode = AddCharMode::ADDCHARWITHBASESTLYE;
@@ -187,6 +188,7 @@ private:
 	PdfGlyph AddCharWithBaseStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfGlyphStyle m_pdfGlyphStyle = {};
 	PdfGlyphStyle m_previousFontAndStyle = {};
+	void insertChar(std::vector<PdfTextRegionLine>::iterator textRegionLineItterator, int increment, QChar qChar);
 };
 
 

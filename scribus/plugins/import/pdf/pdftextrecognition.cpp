@@ -99,6 +99,50 @@ void PdfTextRecognition::setPdfGlyphStyleFont(QFont font)
 	setCharMode(AddCharMode::ADDCHARWITHNEWSTYLE);
 }
 
+void PdfTextRecognition::doBreaksAnbdSpaces(void)
+{
+	int increment = 0;
+	for(auto line = activePdfTextRegion.pdfTextRegionLines.begin(); line < activePdfTextRegion.pdfTextRegionLines.end() - 1; line++)
+	{
+		increment++;
+		if ((*line).width < activePdfTextRegion.maxWidth - 20)
+		{
+			insertChar(line, increment, QChar::SpecialCharacter::LineSeparator);
+		}
+		else
+		{
+			insertChar(line, increment, ' ');
+		}
+	}
+	activePdfTextRegion.pdfTextRegionLines.back().glyphIndex += increment;
+	for (auto segment = activePdfTextRegion.pdfTextRegionLines.back().segments.begin(); segment < activePdfTextRegion.pdfTextRegionLines.back().segments.end(); segment++)
+	{
+		(*segment).glyphIndex += increment;
+	}
+}
+
+void PdfTextRecognition::insertChar(std::vector<PdfTextRegionLine>::iterator textRegionLineItterator, int increment, QChar qChar)
+{
+	auto glyphItterator = (activePdfTextRegion.glyphs.begin() + (*textRegionLineItterator).segments.back().glyphIndex + increment);
+	PdfGlyph newGlyph = PdfGlyph();
+	newGlyph.code = qChar;
+	newGlyph.dx = 10;
+	//no dx or dy as were only inserting spaces and new lines
+	activePdfTextRegion.glyphs.insert(glyphItterator, newGlyph);
+
+	
+	(*textRegionLineItterator).segments.back().glyphIndex++;
+	if(increment > 1){
+		(*textRegionLineItterator).glyphIndex += increment - 1;
+		for (auto segment = (*textRegionLineItterator).segments.begin(); segment < (*textRegionLineItterator).segments.end(); segment++)
+		{
+			(*segment).glyphIndex += increment - 1;
+		}
+	}
+}
+
+
+
 /*
 *	basic functionality to be performed when addChar is called
 *	FIXME: what to do when uLen != 1
@@ -636,6 +680,8 @@ void PdfTextOutputDev::updateTextPos(GfxState* state)
 #ifdef DEBUG_TEXT_IMPORT
 		qDebug("updateTextPos: renderPdfTextFrame() + m_pdfTextRecognition.addPdfTextRegion()");
 #endif
+		if(m_pdfTextRecognition.activePdfTextRegion.pdfTextRegionLines.size() > 1)
+			m_pdfTextRecognition.doBreaksAnbdSpaces();
 		renderTextFrame();
 		m_pdfTextRecognition.addPdfTextRegion();
 		updateTextPos(state);
@@ -795,6 +841,8 @@ void PdfTextOutputDev::endTextObject(GfxState* state)
 #ifdef DEBUG_TEXT_IMPORT
 		qDebug("endTextObject: renderTextFrame");
 #endif
+		if (m_pdfTextRecognition.activePdfTextRegion.pdfTextRegionLines.size() > 1)
+			m_pdfTextRecognition.doBreaksAnbdSpaces();
 		renderTextFrame();
 	}
 	else if (!m_pdfTextRecognition.activePdfTextRegion.pdfTextRegionLines.empty())
@@ -1133,3 +1181,4 @@ QString PdfTextOutputDev::BestMatchingFont(QString PDFname)
 	else
 		return "Arial";
 }
+
