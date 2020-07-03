@@ -133,6 +133,7 @@ public:
 	std::vector<PdfGlyph> glyphs;
 	bool isNew();
 private:
+	qreal m_em = { 1.0 };
 	PdfGlyphStyle* m_newFontStyleToApply = nullptr;          
 	PdfTextRegion::LineType m_lastMode = PdfTextRegion::LineType::FIRSTPOINT;
 };
