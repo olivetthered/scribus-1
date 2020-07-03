@@ -105,9 +105,15 @@ void PdfTextRecognition::doBreaksAnbdSpaces(void)
 	for(auto line = activePdfTextRegion.pdfTextRegionLines.begin(); line < activePdfTextRegion.pdfTextRegionLines.end() - 1; line++)
 	{
 		increment++;
-		if ((*line).width < activePdfTextRegion.maxWidth - 20)
+		//TODO: check based on first word of next line
+		if ((*line).width < activePdfTextRegion.maxWidth - 40 || (*line).maxHeight > activePdfTextRegion.lineSpacing * 1.5)
 		{
 			insertChar(line, increment, QChar::SpecialCharacter::LineSeparator);
+			if ((*line).maxHeight > activePdfTextRegion.lineSpacing * 1.5)
+			{
+				increment++;
+				insertChar(line, 1, QChar::SpecialCharacter::LineSeparator);
+			}
 		}
 		else
 		{
@@ -128,9 +134,7 @@ void PdfTextRecognition::insertChar(std::vector<PdfTextRegionLine>::iterator tex
 	newGlyph.code = qChar;
 	newGlyph.dx = 10;
 	//no dx or dy as were only inserting spaces and new lines
-	activePdfTextRegion.glyphs.insert(glyphItterator, newGlyph);
-
-	
+	activePdfTextRegion.glyphs.insert(glyphItterator, newGlyph);	
 	(*textRegionLineItterator).segments.back().glyphIndex++;
 	if(increment > 1){
 		(*textRegionLineItterator).glyphIndex += increment - 1;
@@ -407,6 +411,10 @@ PdfTextRegion::LineType PdfTextRegion::moveToPoint(QPointF newPoint)
 			pdfTextRegionLine->maxHeight = abs(newPoint.y() - lastXY.y());
 			if (pdfTextRegionLines.size() == 2)
 				lineSpacing = abs(newPoint.y() - lastXY.y()) + 1;
+			if (abs(newPoint.y() - lastXY.y()) + 1 > lineSpacing)
+			{
+				qDebug() << "space: " << abs(newPoint.y() - lastXY.y()) + 1 << " linespacing:" << lineSpacing;
+			}
 		}
 	}
 
@@ -500,6 +508,10 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 		abs(newGlyphPoint.y() - pdfTextRegionLines[pdfTextRegionLines.size() - 2].baseOrigin.y()) :
 		newGlyph.dx;
 	segment->maxHeight = thisHeight > segment->maxHeight ? thisHeight : segment->maxHeight;
+	if (lineSpacing < segment->maxHeight)
+	{
+		qDebug() << "linespacing: " << lineSpacing << " maxheight:" << segment->maxHeight;
+	}
 	pdfTextRegionLine->maxHeight = pdfTextRegionLine->maxHeight > thisHeight ? pdfTextRegionLine->maxHeight : thisHeight;
 	pdfTextRegionLine->width = abs(movedGlyphPoint.x() - pdfTextRegionLine->baseOrigin.x());
 
