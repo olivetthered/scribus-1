@@ -128,6 +128,8 @@ public:
 	PdfTextRegion::LineType moveToPoint(QPointF newPoint);
 	PdfTextRegion::LineType addGlyphAtPoint(QPointF newGlyphPoint, PdfGlyph new_glyph);
 	void renderToTextFrame(PageItem* textNode);
+	void doBreaksAndSpaces(void);
+	void insertChar(std::vector<PdfTextRegionLine>::iterator textRegionLineItterator, int increment, QChar qChar);
 	void SetNewFontAndStyle(PdfGlyphStyle* fontAndSttle);
 	std::vector<PdfGlyph> glyphs;
 	bool isNew();
@@ -176,7 +178,6 @@ public:
 	void setFillColour(QString fillColour);
 	void setStrokeColour(QString strokleColour);
 	void setPdfGlyphStyleFont(QFont font);
-	void doBreaksAnbdSpaces(void);
 private:
 	std::vector<PdfTextRegion> m_pdfTextRegions = std::vector<PdfTextRegion>();
 	AddCharMode m_addCharMode = AddCharMode::ADDCHARWITHBASESTLYE;
@@ -187,8 +188,7 @@ private:
 	PdfGlyph AddCharWithPreviousStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfGlyph AddCharWithBaseStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfGlyphStyle m_pdfGlyphStyle = {};
-	PdfGlyphStyle m_previousFontAndStyle = {};
-	void insertChar(std::vector<PdfTextRegionLine>::iterator textRegionLineItterator, int increment, QChar qChar);
+	PdfGlyphStyle m_previousFontAndStyle = {};	
 };
 
 
@@ -205,7 +205,7 @@ public:
 	//----- text drawing
 	void  beginTextObject(GfxState* state) override;
 	void  endTextObject(GfxState* state) override;
-	void  drawChar(GfxState* state, double /*x*/, double /*y*/, double /*dx*/, double /*dy*/, double /*originX*/, double /*originY*/, CharCode /*code*/, int /*nBytes*/, POPPLER_CONST_082 Unicode* /*u*/, int /*uLen*/) override;
+	void drawChar(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, POPPLER_CONST_082 Unicode* u, int uLen) override;
 	GBool beginType3Char(GfxState* /*state*/, double /*x*/, double /*y*/, double /*dx*/, double /*dy*/, CharCode /*code*/, POPPLER_CONST_082 Unicode* /*u*/, int /*uLen*/) override;
 	void  endType3Char(GfxState* /*state*/) override;
 	void  type3D0(GfxState* /*state*/, double /*wx*/, double /*wy*/) override;
@@ -215,7 +215,7 @@ public:
 	static size_t MatchingChars(QString s1, QString sp);
 	QString BestMatchingFont(QString PDFname);
 private:
-	void setFillAndStrokeForPDF(GfxState* state, PageItem* text_node);
+	//void setFillAndStrokeForPDF(GfxState* state, PageItem* text_node);
 	void updateTextPos(GfxState* state) override;
 	void renderTextFrame();
 	void finishItem(PageItem* item);

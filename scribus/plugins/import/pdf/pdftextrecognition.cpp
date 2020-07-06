@@ -99,51 +99,7 @@ void PdfTextRecognition::setPdfGlyphStyleFont(QFont font)
 	setCharMode(AddCharMode::ADDCHARWITHNEWSTYLE);
 }
 
-void PdfTextRecognition::doBreaksAnbdSpaces(void)
-{
-	int increment = 0;
-	for(auto line = activePdfTextRegion.pdfTextRegionLines.begin(); line < activePdfTextRegion.pdfTextRegionLines.end() - 1; line++)
-	{
-		increment++;
-		//TODO: check based on first word of next line
-		if ((*line).width < activePdfTextRegion.maxWidth - 40 || (*line).maxHeight > activePdfTextRegion.lineSpacing * 1.5)
-		{
-			insertChar(line, increment, QChar::SpecialCharacter::LineSeparator);
-			if ((*line).maxHeight > activePdfTextRegion.lineSpacing * 1.5)
-			{
-				increment++;
-				insertChar(line, 1, QChar::SpecialCharacter::LineSeparator);
-			}
-		}
-		else
-		{
-			insertChar(line, increment, ' ');
-		}
-	}
-	activePdfTextRegion.pdfTextRegionLines.back().glyphIndex += increment;
-	for (auto segment = activePdfTextRegion.pdfTextRegionLines.back().segments.begin(); segment < activePdfTextRegion.pdfTextRegionLines.back().segments.end(); segment++)
-	{
-		(*segment).glyphIndex += increment;
-	}
-}
 
-void PdfTextRecognition::insertChar(std::vector<PdfTextRegionLine>::iterator textRegionLineItterator, int increment, QChar qChar)
-{
-	auto glyphItterator = (activePdfTextRegion.glyphs.begin() + (*textRegionLineItterator).segments.back().glyphIndex + increment);
-	PdfGlyph newGlyph = PdfGlyph();
-	newGlyph.code = qChar;
-	newGlyph.dx = 10;
-	//no dx or dy as were only inserting spaces and new lines
-	activePdfTextRegion.glyphs.insert(glyphItterator, newGlyph);	
-	(*textRegionLineItterator).segments.back().glyphIndex++;
-	if(increment > 1){
-		(*textRegionLineItterator).glyphIndex += increment - 1;
-		for (auto segment = (*textRegionLineItterator).segments.begin(); segment < (*textRegionLineItterator).segments.end(); segment++)
-		{
-			(*segment).glyphIndex += increment - 1;
-		}
-	}
-}
 
 
 
@@ -576,6 +532,54 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 	}
 	textNode->frameTextEnd();
 }
+void PdfTextRegion::doBreaksAndSpaces(void)
+{
+	if (pdfTextRegionLines.size() < 2)
+		return;
+	int increment = 0;
+	for (auto line = pdfTextRegionLines.begin(); line < pdfTextRegionLines.end() - 1; line++)
+	{
+		increment++;
+		//TODO: check based on first word of next line
+		if ((*line).width < maxWidth - 40 || (*line).maxHeight > lineSpacing * 1.5)
+		{
+			insertChar(line, increment, QChar::SpecialCharacter::LineSeparator);
+			if ((*line).maxHeight > lineSpacing * 1.5)
+			{
+				increment++;
+				insertChar(line, 1, QChar::SpecialCharacter::LineSeparator); //FIXME: this should be SpecialChars::PARSEP but it needs continuity of style
+			}
+		}
+		else
+		{
+			insertChar(line, increment, ' ');
+		}
+	}
+	pdfTextRegionLines.back().glyphIndex += increment;
+	for (auto segment = pdfTextRegionLines.back().segments.begin(); segment < pdfTextRegionLines.back().segments.end(); segment++)
+	{
+		(*segment).glyphIndex += increment;
+	}
+}
+
+void PdfTextRegion::insertChar(std::vector<PdfTextRegionLine>::iterator textRegionLineItterator, int increment, QChar qChar)
+{
+	auto glyphItterator = (glyphs.begin() + (*textRegionLineItterator).segments.back().glyphIndex + increment);
+	PdfGlyph newGlyph = PdfGlyph();
+	newGlyph.code = qChar;
+	newGlyph.dx = 10;
+	//no dx or dy as were only inserting spaces and new lines
+	glyphs.insert(glyphItterator, newGlyph);
+	(*textRegionLineItterator).segments.back().glyphIndex++;
+	if (increment > 1)
+	{
+		(*textRegionLineItterator).glyphIndex += increment - 1;
+		for (auto segment = (*textRegionLineItterator).segments.begin(); segment < (*textRegionLineItterator).segments.end(); segment++)
+		{
+			(*segment).glyphIndex += increment - 1;
+		}
+	}
+}
 
 /*
 *	Quick test to see if this is a virgin textregion
@@ -692,8 +696,8 @@ void PdfTextOutputDev::updateTextPos(GfxState* state)
 #ifdef DEBUG_TEXT_IMPORT
 		qDebug("updateTextPos: renderPdfTextFrame() + m_pdfTextRecognition.addPdfTextRegion()");
 #endif
-		if(m_pdfTextRecognition.activePdfTextRegion.pdfTextRegionLines.size() > 1)
-			m_pdfTextRecognition.doBreaksAnbdSpaces();
+		
+		m_pdfTextRecognition.activePdfTextRegion.doBreaksAndSpaces();
 		renderTextFrame();
 		m_pdfTextRecognition.addPdfTextRegion();
 		updateTextPos(state);
@@ -714,8 +718,10 @@ void PdfTextOutputDev::renderTextFrame()
 	if (activePdfTextRegion->glyphs.empty())
 		return;
 
+
+
 	qreal xCoor = m_doc->currentPage()->xOffset() + activePdfTextRegion->pdfTextRegionBasenOrigin.x();
-	qreal yCoor = m_doc->currentPage()->initialHeight() - (m_doc->currentPage()->yOffset() + (double)activePdfTextRegion->pdfTextRegionBasenOrigin.y() + activePdfTextRegion->lineSpacing); // don't know if y is top down or bottom up
+	qreal yCoor = m_doc->currentPage()->initialHeight() + m_doc->currentPage()->yOffset() - ( (double)activePdfTextRegion->pdfTextRegionBasenOrigin.y() + activePdfTextRegion->lineSpacing); // don't know if y is top down or bottom up
 	qreal  lineWidth = 0.0;
 #ifdef DEBUG_TEXT_IMPORT
 	qDebug() << "rendering new frame at:" << xCoor << "," << yCoor << " With lineheight of: " << activePdfTextRegion->lineSpacing << "Height:" << activePdfTextRegion->maxHeight << " Width:" << activePdfTextRegion->maxWidth;
@@ -785,14 +791,6 @@ void PdfTextOutputDev::renderTextFrame()
 	*/
 	textNode->SetFrameShape(32, PdfTextRegion::boundingBoxShape);
 	textNode->ContourLine = textNode->PoLine.copy();
-
-	m_doc->Items->removeLast();
-	m_Elements->append(textNode);
-	if (m_groupStack.count() != 0)
-	{
-		m_groupStack.top().Items.append(textNode);
-		applyMask(textNode);
-	}
 }
 
 /*
@@ -852,9 +850,8 @@ void PdfTextOutputDev::endTextObject(GfxState* state)
 		}
 #ifdef DEBUG_TEXT_IMPORT
 		qDebug("endTextObject: renderTextFrame");
-#endif
-		if (m_pdfTextRecognition.activePdfTextRegion.pdfTextRegionLines.size() > 1)
-			m_pdfTextRecognition.doBreaksAnbdSpaces();
+#endif		
+		m_pdfTextRecognition.activePdfTextRegion.doBreaksAndSpaces();
 		renderTextFrame();
 	}
 	else if (!m_pdfTextRecognition.activePdfTextRegion.pdfTextRegionLines.empty())
