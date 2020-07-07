@@ -18,8 +18,6 @@ for which a new license (GPL+exception) is in place.
 #include <poppler/GfxState.h>
 #include <poppler/CharCodeToUnicode.h>
 
-
-
 class PdfTextFont
 {
 public:
@@ -76,6 +74,19 @@ public:
 
 };
 
+
+class ModeArray
+{
+public:	
+	qreal add(qreal value);
+	qreal mode(void);
+	void clear(void);
+private:
+	static const qreal m_lastMaxInvalid;
+	qreal m_lastMax = { 0.0 };	
+	std::map<qreal, int> m_modeArrayMap = std::map<qreal, int>();
+};
+
 class PdfTextRegion
 {
 public:
@@ -113,7 +124,8 @@ public:
 
 	QPointF pdfTextRegionBasenOrigin = QPointF({}, {});
 	qreal maxHeight = {};
-	qreal lineSpacing = { 1 };
+	ModeArray lineSpacing = ModeArray();
+	qreal fontAssending = { 1.0 };
 	std::vector<PdfTextRegionLine> pdfTextRegionLines = std::vector<PdfTextRegionLine>();
 	qreal maxWidth = {};
 	QPointF lineBaseXY = QPointF({ }, { }); //updated with the best match left value from all the textRegionLines and the best bottom value from the textRegionLines.segments;
