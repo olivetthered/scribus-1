@@ -415,7 +415,7 @@ PdfTextRegion::LineType PdfTextRegion::moveToPoint(QPointF newPoint)
 		lineBaseXY = newPoint;
 		if (mode == LineType::NEWLINE)
 		{
-			pdfTextRegionLine->maxHeight = abs(newPoint.y() - lastXY.y());
+			pdfTextRegionLine->maxHeight = abs(newPoint.y() - lastXY.y())+1;
 			if (pdfTextRegionLines.size() >= 2)
 				lineSpacing.add(abs(newPoint.y() - lastXY.y()) + 1);
 		}
@@ -603,7 +603,7 @@ void PdfTextRegion::doBreaksAndSpaces(void)
 	{
 		increment++;
 		//TODO: check based on first word of next line
-		if ((*line).width < maxWidth - 40 || (*line).maxHeight > lineSpacing.mode() * 1.5)
+		if ((*line).width < maxWidth - 8 || ((line < pdfTextRegionLines.end() - 1) &&  (*(line + 1)).maxHeight > lineSpacing.mode() * 1.5))
 		{
 			insertChar(line, increment, QChar::SpecialCharacter::LineSeparator);
 			if ((line <  pdfTextRegionLines.end() - 1) && (*(line + 1)).maxHeight > lineSpacing.mode() * 1.5) //FIXME: The line itself should really be of the correct height, not the following line.
