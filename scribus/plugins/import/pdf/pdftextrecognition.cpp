@@ -713,7 +713,6 @@ void PdfTextOutputDev::updateTextMat(GfxState* state)
 		m_pdfGlyphStyle.fontScaling = m_fontScaling;
 		m_pdfTextRecognition.setPdfGlyphStyleScale(m_pdfGlyphStyle.fontScaling);
 		m_pdfTextRecognition.setCharMode(PdfTextRecognition::AddCharMode::ADDCHARWITHBASESTLYE);
-		//updateFont(state);
 	}
 }
 
