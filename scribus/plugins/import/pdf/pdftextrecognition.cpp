@@ -105,16 +105,25 @@ void PdfTextRecognition::setStrokeColour(QString strokleColour)
 	setCharMode(AddCharMode::ADDCHARWITHNEWSTYLE);
 }
 
-void PdfTextRecognition::setPdfGlyphStyleFont(QFont font)
+void PdfTextRecognition::setPdfGlyphStyleFace(ScFace& face)
 {
-	m_pdfGlyphStyle.font = font;
+	m_pdfGlyphStyle.face = face;
+	newFontAndStyle = true;
+	setCharMode(AddCharMode::ADDCHARWITHNEWSTYLE);
+}
+void PdfTextRecognition::setPdfGlyphStyleSizeF(double pointSizeF)
+{
+	m_pdfGlyphStyle.pointSizeF = pointSizeF;
 	newFontAndStyle = true;
 	setCharMode(AddCharMode::ADDCHARWITHNEWSTYLE);
 }
 
-
-
-
+void PdfTextRecognition::setPdfGlyphStyleScale(double fontScaling)
+{
+	m_pdfGlyphStyle.fontScaling = fontScaling;
+	newFontAndStyle = true;
+	setCharMode(AddCharMode::ADDCHARWITHNEWSTYLE);
+}
 
 /*
 *	basic functionality to be performed when addChar is called
@@ -477,10 +486,9 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 	//qDebug() << "addGlyphAtPoint: newGlyphPoint:" << newGlyphPoint << " char:" << (QChar)newGlyph.code;
 	QPointF movedGlyphPoint = QPointF(newGlyphPoint.x() + newGlyph.dx, newGlyphPoint.y() + newGlyph.dy);
 	if (glyphs.size() == 1)
-	{
-		QFontMetrics qFontMetrics = QFontMetrics(m_newFontStyleToApply->font);
-		lineSpacing.add(qFontMetrics.height());
-		fontAssending = qFontMetrics.ascent();
+	{		
+		lineSpacing.add(m_newFontStyleToApply->face.height() * m_newFontStyleToApply->pointSizeF * m_newFontStyleToApply->fontScaling);
+		fontAssending = m_newFontStyleToApply->face.ascent() * m_newFontStyleToApply->pointSizeF * m_newFontStyleToApply->fontScaling;
 		lastXY = newGlyphPoint;
 		lineBaseXY = newGlyphPoint;
 	}
@@ -510,7 +518,6 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 	{
 		segment->pdfGlyphStyle = *m_newFontStyleToApply;
 		m_newFontStyleToApply = nullptr;
-		//qDebug() << m_newFontStyleToApply->font.toString() << "bold:" << m_newFontStyleToApply->font.bold() << "italic:" << m_newFontStyleToApply->font.italic();
 	}
 	
 	qreal thisHeight = pdfTextRegionLines.size() > 1 ?
@@ -546,7 +553,6 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 	for (int i = 0; i < pdfTextRegionLines.size(); i++)
 	{
 		bodyText = "";
-		QFont font = pdfTextRegionLines[i].segments[0].pdfGlyphStyle.font;
 		for (int glyphIndex = pdfTextRegionLines[i].glyphIndex; glyphIndex <= pdfTextRegionLines[i].segments[0].glyphIndex; glyphIndex++)
 		{
 			bodyText += glyphs[glyphIndex].code;
@@ -559,11 +565,9 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 			qDebug() << "break;";
 		}
 		*/
-		SlaOutputDev::applyTextStyle(textNode, pdfTextRegionLines[i].segments[0].pdfGlyphStyle.font.family(),
+		SlaOutputDev::applyTextStyle(textNode, pdfTextRegionLines[i].segments[0].pdfGlyphStyle.face,
 			pdfTextRegionLines[i].segments[0].pdfGlyphStyle.currColorFill,
-			pdfTextRegionLines[i].segments[0].pdfGlyphStyle.font.pointSizeF(),
-			pdfTextRegionLines[i].segments[0].pdfGlyphStyle.font.bold(),			
-			pdfTextRegionLines[i].segments[0].pdfGlyphStyle.font.italic(),
+			pdfTextRegionLines[i].segments[0].pdfGlyphStyle.pointSizeF * pdfTextRegionLines[i].segments[0].pdfGlyphStyle.fontScaling,
 			pdfTextRegionLines[i].glyphIndex, (pdfTextRegionLines[i].segments[0].glyphIndex - pdfTextRegionLines[i].glyphIndex) + 1);
 		for (int j = 1; j < (int)pdfTextRegionLines[i].segments.size(); j++)
 		{
@@ -582,11 +586,9 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 				qDebug() << "break;";
 			}
 			*/			
-			SlaOutputDev::applyTextStyle(textNode, pdfTextRegionLines[i].segments[j].pdfGlyphStyle.font.family(),
+			SlaOutputDev::applyTextStyle(textNode, pdfTextRegionLines[i].segments[j].pdfGlyphStyle.face,
 				pdfTextRegionLines[i].segments[j].pdfGlyphStyle.currColorFill,
-				pdfTextRegionLines[i].segments[j].pdfGlyphStyle.font.pointSizeF(),
-				pdfTextRegionLines[i].segments[j].pdfGlyphStyle.font.bold(),
-				pdfTextRegionLines[i].segments[j].pdfGlyphStyle.font.italic(),
+				pdfTextRegionLines[i].segments[0].pdfGlyphStyle.pointSizeF * pdfTextRegionLines[i].segments[0].pdfGlyphStyle.fontScaling,
 				pdfTextRegionLines[i].segments[j - 1].glyphIndex + 1, (pdfTextRegionLines[i].segments[j].glyphIndex - pdfTextRegionLines[i].segments[j - 1].glyphIndex));			
 		}
 
@@ -708,7 +710,10 @@ void PdfTextOutputDev::updateTextMat(GfxState* state)
 #ifdef DEBUG_TEXT_IMPORT_FONTS
 		qDebug() << "Rescaling the font, " << max_scale << " this should no longer need to call or trigger update font inseted it should set the correct addchar mode";
 #endif
-		updateFont(state);
+		m_pdfGlyphStyle.fontScaling = m_fontScaling;
+		m_pdfTextRecognition.setPdfGlyphStyleScale(m_pdfGlyphStyle.fontScaling);
+		m_pdfTextRecognition.setCharMode(PdfTextRecognition::AddCharMode::ADDCHARWITHBASESTLYE);
+		//updateFont(state);
 	}
 }
 
@@ -961,56 +966,30 @@ static void DumpFont(GfxFont*font)
 	qDebug() << "Normal:" << font->Normal;
 #endif
 }
-
-/**
- * \brief Updates _font_style according to the font set in parameter state
- FIXME: This function is rather large and unruly and it does lots of things so it's a good target for reducing down into simpler parts which would also make it easier to understand.
- TODO: Have a font name substitution cache, so we can just match up font->getName()->getCString() if it's already been processed
- */
-void PdfTextOutputDev::updateFont(GfxState* state)
+ScFace* PdfTextOutputDev::getCachedFont(GfxFont* font)
 {
-	GfxFont* font = state->getFont();
-	if (!font)
-		return;
-	//qDebug() << "updateFontForText()"
-	m_needFontUpdate = false;
-	if (m_pdfTextRecognition.activePdfTextRegion.isNew())
-		m_lastFontSpecification = "Were in a new region";
-
-	QFont origional_font_style = m_pdfGlyphStyle.font;
-#ifdef DEBUG_TEXT_IMPORT_FONTS
-	qDebug() << "origional_font_style:" << origional_font_style.toString();
-	qDebug() << "m_lastFontSpecification:" << m_lastFontSpecification;
-#endif
+	PdfTextFont pdfTextFont = PdfTextFont((QString)font->getName()->c_str(), font->isBold(), font->isItalic());
 	
-
-	// Store original name	
-	QString _fontSpecification;
-	if (font != NULL && font->getName())
+	auto it = m_fontMap.find(pdfTextFont);
+	if (it != m_fontMap.end())
 	{
-
-		auto newFontSDpecification = static_cast<QString>(font->getName()->c_str());		 
-		//if (m_lastFontSpecification != newFontSDpecification)
-		//{
-		m_lastFontSpecification = newFontSDpecification;
-		_fontSpecification = newFontSDpecification;
-		//}
+		return (it->second);
 	}
 	else
 	{
-		auto newFontSDpecification = static_cast<QString>("Arial");
-		//if (m_lastFontSpecification != newFontSDpecification)
-		//{
-		m_lastFontSpecification = newFontSDpecification;
-		_fontSpecification = newFontSDpecification;
-		//}
+		return nullptr;
 	}
-
-	m_pdfTextRecognition.setCharMode(PdfTextRecognition::AddCharMode::ADDCHARWITHNEWSTYLE);
-	m_previouisGlyphStyle =  m_pdfGlyphStyle;
 	
-	//we've got this far so we are good to start afresh with a new PdfGlyphStyle
-	m_pdfGlyphStyle.font = QFont();
+}
+ScFace* PdfTextOutputDev::cachedFont(GfxFont* font)
+{
+	// Store original name	
+	QString _fontSpecification;
+	if (font->getName())			
+		_fontSpecification = static_cast<QString>(font->getName()->c_str());	
+	else			
+		_fontSpecification = static_cast<QString>("Arial");
+
 	// Prune the font name to get the correct font family name
 	// In a PDF font names can look like this: IONIPB+MetaPlusBold-Italic
 	QString font_family;
@@ -1031,73 +1010,138 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 	if (style_delim < 0)
 		style_delim = font_family.indexOf(",");
 	if (style_delim >= 0)
-	{		
+	{
 		font_style = font_family.mid(style_delim + 1);
 		font_style_lowercase = font_style.toLower();
 		font_family = font_family.left(style_delim);
 	}
 
 	QString cs_font_family = "Arial";
-	// Font family
-	if (font != NULL && font->getFamily())
+	// Font family	
+
+	if (font->getFamily())
 		cs_font_family = font->getFamily()->getCString();
 	else
 	{
-		int attr_value = 1;
-		if (attr_value != 0)
+		// Find the font that best matches the stripped down (orig)name (Bug LP #179589).
+		QString fontMatchingString = font_family;
+		//if (font_style == "")
+		//	font_style = "Regular";
+		if (fontMatchingString == "")
+			fontMatchingString = "Arial";
+		if (font_style.length() > 0)
+			fontMatchingString += "-" + font_style;
+		cs_font_family = fontMatchingString;// bestMatchingFont(fontMatchingString);
+	}
+
+	ScFace* face =makeFont(font, cs_font_family, font_style_lowercase);
+	PdfTextFont pdfTextFont = PdfTextFont((QString)font->getName()->c_str(), font->isBold(), font->isItalic());
+	m_fontMap.insert({ pdfTextFont, face });
+	return face;
+}
+
+ScFace* PdfTextOutputDev::matchScFaceToFamilyAndStyle(const QString& fontName, const QString& font_style_lowercase, bool bold, bool italic)
+{
+	QString newFontName = fontName;
+	//TODO: Set bestFont to a default font;
+	ScFace* bestFont = nullptr;
+	int maxStyle = -1;
+	if (!fontName.isEmpty())
+	{
+		if (bold == false && italic == false && fontName == "Arial")
 		{
-			// Find the font that best matches the stripped down (orig)name (Bug LP #179589).
-			QString fontMatchingString = font_family;
-			//if (font_style == "")
-			//	font_style = "Regular";
-			if (fontMatchingString == "")
-				fontMatchingString = "Arial";
-			if (font_style.length() > 0)
-				fontMatchingString += "-" + font_style;
-			cs_font_family = bestMatchingFont(fontMatchingString);
+			newFontName = fontName + " Regular";
 		}
-		else
+		SCFontsIterator it(*m_doc->AllFonts);
+		for (; it.hasNext(); it.next())
 		{
-			cs_font_family = font_family;
+			ScFace& face(it.current());
+			int style = 0;			
+			if ((face.usable()) && (face.type() == ScFace::TTF))
+			{
+
+				if (face.isBold() == bold)
+				{
+					style++;
+				}
+				if (face.isItalic() == italic)
+				{
+					style++;
+				}				
+			
+				if ((face.psName() == newFontName) && (face.usable()) && (face.type() == ScFace::TTF))
+				{
+					style++;
+					style++;
+				} 
+
+				else if ((face.scName() == newFontName) && (face.usable()) && (face.type() == ScFace::TTF))
+				{
+					style++;
+					style++;
+				}
+				else
+				{
+					if ((newFontName.contains(face.family())) && (face.usable()) && (face.type() == ScFace::TTF))
+					{
+						style++;
+					}
+
+					if ((newFontName.contains(face.style())) && (face.usable()) && (face.type() == ScFace::TTF))
+					{
+						style++;
+					}
+				}
+				if (style > maxStyle)
+				{
+					maxStyle = style;
+					bestFont = &face;
+				}
+			}
 		}
 	}
-	
-	m_pdfGlyphStyle.font.setFamily(cs_font_family);
-	m_pdfGlyphStyle.font.setStyle(QFont::StyleNormal);
-	m_pdfGlyphStyle.font.setItalic(false);
+	return bestFont;
+}
+ScFace* PdfTextOutputDev::makeFont(GfxFont* font, QString cs_font_family, QString font_style_lowercase)
+{
+	bool italic = false;
+	bool oblique = false;
+	bool bold = false;
+
 	// Font style
-	if (font != NULL && font->isItalic())
-		m_pdfGlyphStyle.font.setItalic(true);
+	if (font->isItalic())
+		italic = true;
 	else
-		if (font_style != "")
+		if (font_style_lowercase != "")
 			if ((font_style_lowercase.indexOf("italic") >= 0) ||
 				font_style_lowercase.indexOf("slanted") >= 0)
-				m_pdfGlyphStyle.font.setItalic(true);
+				italic = true;
 			else if (font_style_lowercase.indexOf("oblique") >= 0)
-				m_pdfGlyphStyle.font.setStyle(QFont::StyleOblique);
-#ifdef DEBUG_TEXT_IMPORT_FONTS
-	qDebug() << "font_style_lowercase:" << font_style_lowercase;
-#endif
-	m_pdfGlyphStyle.font.setBold(false);
-	if (font != NULL && font->isBold())
-		m_pdfGlyphStyle.font.setBold(true);
+				oblique = true;
+	
+	if (font->isBold())
+		bold = true;
 	else if (font_style_lowercase.indexOf("bold") >= 0)
-		m_pdfGlyphStyle.font.setBold(true);
-	//if (m_pdfGlyphStyle.font.bold() == false && m_pdfGlyphStyle.font.italic() == false && font_style == "")
-		//m_pdfGlyphStyle.font.setFamily(cs_font_family + " Regular");
-	// Font weight
-	GfxFont::Weight font_weight = font != NULL ? font->getWeight() : GfxFont::W400;	
-	char* css_font_weight = nullptr;
+		bold = true;
 
+	// Font weight
+	GfxFont::Weight font_weight = font->getWeight();
+/* ScFace doesn't support font weight
 	if (font_weight != GfxFont::WeightNotDefined)
 		if (font_weight == GfxFont::W400)
 			m_pdfGlyphStyle.font.setWeight(QFont::Normal);
-		else if (font_weight == GfxFont::W700)
-			m_pdfGlyphStyle.font.setWeight(QFont::Bold);
+		else 
+			*/
+		if (font_weight == GfxFont::W700)
+			bold = true;
 
+		return matchScFaceToFamilyAndStyle(cs_font_family, font_style_lowercase, bold, italic);
+			//m_pdfGlyphStyle.font.setWeight(QFont::Bold);
+
+	/*  ScFace doesn't support font streach
 	m_pdfGlyphStyle.font.setStretch(QFont::Unstretched);
-	// Font stretch
-	GfxFont::Stretch font_stretch = font != NULL ? font->getStretch() : GfxFont::Normal;
+	// Font stretch	
+	GfxFont::Stretch font_stretch = font->getStretch();
 	switch (font_stretch)
 	{
 	case GfxFont::UltraCondensed:
@@ -1130,20 +1174,45 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 	default:
 		break;
 	}
+	*/
+}
+/**
+ * \brief Updates _font_style according to the font set in parameter state
+ FIXME: This function is rather large and unruly and it does lots of things so it's a good target for reducing down into simpler parts which would also make it easier to understand.
+ TODO: Have a font name substitution cache, so we can just match up font->getName()->getCString() if it's already been processed
+ */
+void PdfTextOutputDev::updateFont(GfxState* state)
+{
+	GfxFont* font = state->getFont();
+	if (!font)
+		return;
+	m_needFontUpdate = false;
+
+	ScFace origional_face_style = m_pdfGlyphStyle.face;
+#ifdef DEBUG_TEXT_IMPORT_FONTS
+	qDebug() << "origional_font_style:" << origional_font_style.toString();
+	qDebug() << "m_lastFontSpecification:" << m_lastFontSpecification;
+#endif
+	
+	ScFace* face = getCachedFont(font);
+	if (face == nullptr)
+	{
+		face = cachedFont(font);
+	}
 
 	//I think font scaling should be handled outside this function like things like colour are. convert pixels to points 0.75
-	
+	m_pdfGlyphStyle.face = *face;
 	double css_font_size = m_fontScaling * state->getFontSize() * 0.75;
 #ifdef DEBUG_TEXT_IMPORT_FONTS
 	qDebug() << "m_fontScaling: " << m_fontScaling << "state->getFontSize():" << state->getFontSize();
 #endif
 	if (css_font_size == 0)
 		css_font_size = 1;
-	m_pdfGlyphStyle.font.setPointSizeF(css_font_size);
+	m_pdfGlyphStyle.pointSizeF = state->getFontSize() * 0.75;//. css_font_size;
+	m_pdfGlyphStyle.fontScaling = m_fontScaling;
 
-	m_pdfGlyphStyle.font.resolve();
 #ifdef DEBUG_TEXT_IMPORT_FONTS
-
+	/* TODO: Update this debug coded to use ScFace
 	if (m_pdfGlyphStyle.font.key() == origional_font_style.key() || m_pdfGlyphStyle.font.toString() == origional_font_style.toString())
 	{
 
@@ -1155,18 +1224,39 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 		qDebug() << "Font has changed from.. " << origional_font_style.family() << " " << origional_font_style.key() << "  " << origional_font_style.toString() << "bold:" << origional_font_style.bold() << "style:" << origional_font_style.italic() << endl;
 
 	}
+	*/
 #endif
+
 	// Should only have to update the font if it's actually changed
-	if (m_pdfGlyphStyle.font.key() != origional_font_style.key() && m_pdfGlyphStyle.font.toString() != origional_font_style.toString())
+	if (!faceMatches(m_pdfGlyphStyle.face, origional_face_style))
 	{
 		m_pdfTextRecognition.setFillColour(m_pdfGlyphStyle.currColorFill);
 		m_pdfTextRecognition.setStrokeColour(m_pdfGlyphStyle.currColorStroke);
-		m_pdfTextRecognition.setPdfGlyphStyleFont(m_pdfGlyphStyle.font);
+		m_pdfTextRecognition.setPdfGlyphStyleFace(m_pdfGlyphStyle.face);
+		m_pdfTextRecognition.setPdfGlyphStyleSizeF(m_pdfGlyphStyle.pointSizeF);
+		m_pdfTextRecognition.setPdfGlyphStyleScale(m_pdfGlyphStyle.fontScaling);
 		m_pdfTextRecognition.setCharMode(PdfTextRecognition::AddCharMode::ADDCHARWITHBASESTLYE);
 	}
 	
 }
 
+bool PdfTextOutputDev::faceMatches(ScFace& face1, ScFace& face2)
+{
+	if ((&face1 == nullptr || &face2 == nullptr) && face1 != face2)
+		return false;
+	else if ((&face1 == nullptr && &face2 == nullptr))
+		return true;
+	if (face1.isBold() != face2.isBold())
+		return false;
+	if (face1.isItalic() != face2.isItalic())
+		return false;
+	if (face1.scName()!= face2.scName())
+		return false;
+	if (face1.fontFeatures() != face2.fontFeatures())
+		return false;
+
+	return true;
+}
 void PdfTextOutputDev::updateFillColor(GfxState* state)
 {
 	SlaOutputDev::updateFillColor(state);
@@ -1210,7 +1300,6 @@ void PdfTextOutputDev::updateTextShift(GfxState* state, double shift)
 {
 	//qDebug() << "updateTextShift() shift:" << shift;
 }
-
 
 /*
 	MatchingChars

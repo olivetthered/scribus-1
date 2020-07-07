@@ -18,30 +18,47 @@ for which a new license (GPL+exception) is in place.
 #include <poppler/GfxState.h>
 #include <poppler/CharCodeToUnicode.h>
 
-class PdfTextFont
+struct PdfTextFont
 {
-public:
-	int    charset = { 1 };
-	QFont  font;
-	double rotation = { 0.0 };
+	QString name = {};
+	bool bold = { false };
+	bool italic = { false };
+	PdfTextFont(QString name, bool bold, bool italic)
+	{
+		this->name = name;
+		this->bold = bold;
+		this->italic = italic;
+	}
+	inline  QString toString()
+	{
+		return name + ":" + bold + ":" + italic;
+	}
+
+	inline bool operator< (const PdfTextFont& rhs) const { return name + ":" + bold + ":" + italic < rhs.name + ":" + rhs.bold + ":" + rhs.italic; }
+	inline bool operator> (const PdfTextFont& rhs) const { return rhs.name + ":" + rhs.bold + ":" + rhs.italic < name + ":" + bold + ":" + italic; }
+	inline bool operator<=(const PdfTextFont& rhs) const { return !(name + ":" + bold + ":" + italic > rhs.name + ":" + rhs.bold + ":" + rhs.italic); }
+	inline bool operator>=(const PdfTextFont& rhs) const { return !(name + ":" + bold + ":" + italic < rhs.name + ":" + rhs.bold + ":" + rhs.italic); }
 };
 
 
 struct PdfGlyphStyle
 {
 public:
-	QFont font = {};
-	bool  fill;
-	bool stroke;
+	ScFace face = { };
+	bool  fill = { false };
+	bool stroke = { false };
 	double rotation = { 0.0 };
 	int    charset = { 1 };
 	QString currColorFill = { "0x00000000" };
 	QString currColorStroke = { "0x00000000" };
 	int currStrokeShade{ 100 };
+	// font size in points;
+	double pointSizeF = { 1.0 };
+	double fontScaling = { 1.0 };
 	QString toString(void) 
 	{
 		QTextStream result;
-		result << "fill=" << fill << ":stroke=" << stroke << ":font=" << font.toString();
+		result << "fill=" << fill << ":stroke=" << stroke << ":font=" << face.scName();
 		result.flush();
 		return *result.string();
 	}
@@ -190,7 +207,10 @@ public:
 	bool isNewRegion(QPointF newPosition);
 	void setFillColour(QString fillColour);
 	void setStrokeColour(QString strokleColour);
-	void setPdfGlyphStyleFont(QFont font);
+	void setPdfGlyphStyleFace(ScFace& face);
+	void setPdfGlyphStyleSizeF(double pointSizeF);
+	void setPdfGlyphStyleScale(double fontScaling);
+
 	bool newFontAndStyle = false;
 private:
 	std::vector<PdfTextRegion*> m_pdfTextRegions = std::vector<PdfTextRegion*>();
@@ -200,12 +220,11 @@ private:
 	PdfGlyph AddBasicChar(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfGlyph AddCharWithNewStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfGlyph AddCharWithPreviousStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
-	PdfGlyph AddCharWithBaseStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
+	PdfGlyph AddCharWithBaseStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);		
 	PdfGlyphStyle m_pdfGlyphStyle = {};
 	PdfGlyphStyle m_previousFontAndStyle = {};	
 	bool m_addWhiteSpace = false;
 };
-
 
 class PdfTextOutputDev : public SlaOutputDev
 {
@@ -213,7 +232,8 @@ public:
 	PdfTextOutputDev(ScribusDoc* doc, QList<PageItem*>* Elements, QStringList* importedColors, int flags);
 	virtual ~PdfTextOutputDev();
 
-	void updateFont(GfxState* state) override;
+	void updateFont(GfxState* state) override;	
+	bool faceMatches(ScFace& face1, ScFace& face2);
 	void updateFillColor(GfxState* state) override;
 	void updateStrokeColor(GfxState* state) override;
 
@@ -234,6 +254,13 @@ private:
 	void updateTextPos(GfxState* state) override;
 	void renderTextFrame();
 	void finishItem(PageItem* item);
+	ScFace* getCachedFont(GfxFont* font);
+	ScFace* cachedFont(GfxFont* font);	
+	ScFace* matchScFaceToFamilyAndStyle(const QString& fontName, const QString& font_style_lowercase, bool bold, bool italic);
+	ScFace* makeFont(GfxFont* font, QString cs_font_family, QString font_style_lowercase);
+	ScFace* makeFont();
+
+	std::map<PdfTextFont, ScFace* > m_fontMap = std::map<PdfTextFont, ScFace* >();
 	PdfTextRecognition m_pdfTextRecognition = {};
 	PdfGlyphStyle m_pdfGlyphStyle = {};	
 	PdfGlyphStyle m_previouisGlyphStyle = {};	
