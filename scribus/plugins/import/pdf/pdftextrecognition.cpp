@@ -588,7 +588,7 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 			*/			
 			SlaOutputDev::applyTextStyle(textNode, pdfTextRegionLines[i].segments[j].pdfGlyphStyle.face,
 				pdfTextRegionLines[i].segments[j].pdfGlyphStyle.currColorFill,
-				pdfTextRegionLines[i].segments[0].pdfGlyphStyle.pointSizeF * pdfTextRegionLines[i].segments[0].pdfGlyphStyle.fontScaling,
+				pdfTextRegionLines[i].segments[j].pdfGlyphStyle.pointSizeF * pdfTextRegionLines[i].segments[j].pdfGlyphStyle.fontScaling,
 				pdfTextRegionLines[i].segments[j - 1].glyphIndex + 1, (pdfTextRegionLines[i].segments[j].glyphIndex - pdfTextRegionLines[i].segments[j - 1].glyphIndex));			
 		}
 
@@ -1069,25 +1069,25 @@ ScFace* PdfTextOutputDev::matchScFaceToFamilyAndStyle(const QString& fontName, c
 					style++;
 				}				
 			
-				if ((face.psName() == newFontName) && (face.usable()) && (face.type() == ScFace::TTF))
+				if (face.psName() == newFontName)
 				{
 					style++;
 					style++;
 				} 
 
-				else if ((face.scName() == newFontName) && (face.usable()) && (face.type() == ScFace::TTF))
+				else if (face.scName() == newFontName)
 				{
 					style++;
 					style++;
 				}
 				else
 				{
-					if ((newFontName.contains(face.family())) && (face.usable()) && (face.type() == ScFace::TTF))
+					if (newFontName.contains(face.family()))
 					{
 						style++;
 					}
 
-					if ((newFontName.contains(face.style())) && (face.usable()) && (face.type() == ScFace::TTF))
+					if (newFontName.contains(face.style()))
 					{
 						style++;
 					}
@@ -1193,7 +1193,8 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 	qDebug() << "origional_font_style:" << origional_font_style.toString();
 	qDebug() << "m_lastFontSpecification:" << m_lastFontSpecification;
 #endif
-	
+	m_previouisGlyphStyle = m_pdfGlyphStyle;
+
 	ScFace* face = getCachedFont(font);
 	if (face == nullptr)
 	{
@@ -1202,12 +1203,12 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 
 	//I think font scaling should be handled outside this function like things like colour are. convert pixels to points 0.75
 	m_pdfGlyphStyle.face = *face;
-	double css_font_size = m_fontScaling * state->getFontSize() * 0.75;
+	//double css_font_size = m_fontScaling * state->getFontSize() * 0.75;
 #ifdef DEBUG_TEXT_IMPORT_FONTS
 	qDebug() << "m_fontScaling: " << m_fontScaling << "state->getFontSize():" << state->getFontSize();
 #endif
-	if (css_font_size == 0)
-		css_font_size = 1;
+	//if (css_font_size == 0)
+	//	css_font_size = 1;
 	m_pdfGlyphStyle.pointSizeF = state->getFontSize() * 0.75;//. css_font_size;
 	m_pdfGlyphStyle.fontScaling = m_fontScaling;
 
