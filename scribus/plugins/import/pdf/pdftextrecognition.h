@@ -130,7 +130,7 @@ public:
 	void renderToTextFrame(PageItem* textNode);
 	void doBreaksAndSpaces(void);
 	void insertChar(std::vector<PdfTextRegionLine>::iterator textRegionLineItterator, int increment, QChar qChar);
-	void SetNewFontAndStyle(PdfGlyphStyle* fontAndSttle);
+	void setNewFontAndStyle(PdfGlyphStyle* fontAndSttle);
 	std::vector<PdfGlyph> glyphs;
 	bool isNew();
 private:
@@ -174,12 +174,14 @@ public:
 	void addPdfTextRegion();
 	void addChar(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, POPPLER_CONST_082 Unicode* u, int uLen);
 	bool isChangeOnSameLine(QPointF newPosition);
-	bool isNewLineOrRegion(QPointF newPosition);
+	bool isNewLine(QPointF newPosition);	
+	bool isNewRegion(QPointF newPosition);
 	void setFillColour(QString fillColour);
 	void setStrokeColour(QString strokleColour);
 	void setPdfGlyphStyleFont(QFont font);
+	bool newFontAndStyle = false;
 private:
-	std::vector<PdfTextRegion> m_pdfTextRegions = std::vector<PdfTextRegion>();
+	std::vector<PdfTextRegion*> m_pdfTextRegions = std::vector<PdfTextRegion*>();
 	AddCharMode m_addCharMode = AddCharMode::ADDCHARWITHBASESTLYE;
 	PdfGlyph AddCharCommon(GfxState* state, double x, double y, double dx, double dy, Unicode const* u, int uLen);
 	PdfGlyph AddFirstChar(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
@@ -189,6 +191,7 @@ private:
 	PdfGlyph AddCharWithBaseStyle(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, Unicode const* u, int uLen);
 	PdfGlyphStyle m_pdfGlyphStyle = {};
 	PdfGlyphStyle m_previousFontAndStyle = {};	
+	bool m_addWhiteSpace = false;
 };
 
 
@@ -213,7 +216,7 @@ public:
 	void updateTextMat(GfxState* state) override;
 	void updateTextShift(GfxState* state, double shift) override;
 	static size_t MatchingChars(QString s1, QString sp);
-	QString BestMatchingFont(QString PDFname);
+	QString bestMatchingFont(QString PDFname);
 private:
 	//void setFillAndStrokeForPDF(GfxState* state, PageItem* text_node);
 	void updateTextPos(GfxState* state) override;
