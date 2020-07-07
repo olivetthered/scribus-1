@@ -138,15 +138,76 @@ public:
 							,0.0,0.0
 							,0.0,0.0
 	};
+	inline QPointF& pdfTextRegionBasenOrigin()
+	{
+		return m_pdfTextRegionBasenOrigin;
+	}
+	inline void setPdfTextRegionBasenOrigin(QPointF qPointF)
+	{
+		m_pdfTextRegionBasenOrigin = qPointF;
+	}
+	
+	inline qreal& maxHeight()
+	{
+		return m_maxHeight;
+	}
+	inline void setMaxHeight(qreal real)
+	{
+		 m_maxHeight = real;
+	}
+	inline ModeArray& lineSpacing()
+	{
+		return m_lineSpacing;
+	}
+	/*
+	inline void setLineSpacing(ModeArray modeArray)
+	{
+		m_lineSpacing = modeArray;
+	}
+	*/
+	inline const qreal& fontAssending()
+	{
+		return m_fontAssending;
+	}
+	inline void setFontAssending(qreal real)
+	{
+		m_fontAssending = real;
+	}
+	inline std::vector<PdfTextRegionLine>& pdfTextRegionLines()
+	{
+		return m_pdfTextRegionLines;
+	}
+	/*
+	inline void setPdfTextRegionLines(std::vector<PdfTextRegionLine> pdfTextRegionLines)
+	{
+		m_pdfTextRegionLines = pdfTextRegionLines;
+	}
+	*/
+	inline qreal& maxWidth()
+	{
+		return m_maxWidth;
+	}
+	inline void setMaxWidth(qreal real)
+	{
+		m_maxWidth = real;
+	}
+	inline QPointF& lineBaseXY()
+	{
+		return m_lineBaseXY;
+	}
+	inline void setLineBaseXY(QPointF qPointF)
+	{
+		m_lineBaseXY = qPointF;
+	}
+	inline QPointF& lastXY()
+	{
+		return m_lastXY;
+	}
+	inline void setLastXY(QPointF qPointF)
+	{
+		m_lastXY = qPointF;
+	}
 
-	QPointF pdfTextRegionBasenOrigin = QPointF({}, {});
-	qreal maxHeight = {};
-	ModeArray lineSpacing = ModeArray();
-	qreal fontAssending = { 1.0 };
-	std::vector<PdfTextRegionLine> pdfTextRegionLines = std::vector<PdfTextRegionLine>();
-	qreal maxWidth = {};
-	QPointF lineBaseXY = QPointF({ }, { }); //updated with the best match left value from all the textRegionLines and the best bottom value from the textRegionLines.segments;
-	QPointF lastXY = QPointF({}, {});
 	static bool collinear(qreal a, qreal b);
 	bool isCloseToX(qreal x1, qreal x2);
 	bool isCloseToY(qreal y1, qreal y2);
@@ -163,6 +224,14 @@ public:
 	std::vector<PdfGlyph> glyphs;
 	bool isNew();
 private:
+	QPointF m_pdfTextRegionBasenOrigin = QPointF({}, {});
+	qreal m_maxHeight = {};
+	ModeArray m_lineSpacing = ModeArray();
+	qreal m_fontAssending = { 1.0 };
+	std::vector<PdfTextRegionLine> m_pdfTextRegionLines = std::vector<PdfTextRegionLine>();
+	qreal m_maxWidth = {};
+	QPointF m_lineBaseXY = QPointF({ }, { }); //updated with the best match left value from all the textRegionLines and the best bottom value from the textRegionLines.segments;
+	QPointF m_lastXY = QPointF({}, {});
 	PdfGlyphStyle* m_newFontStyleToApply = nullptr;          
 	PdfTextRegion::LineType m_lastMode = PdfTextRegion::LineType::FIRSTPOINT;
 };
@@ -238,17 +307,17 @@ public:
 	void updateStrokeColor(GfxState* state) override;
 
 	//----- text drawing
-	void  beginTextObject(GfxState* state) override;
-	void  endTextObject(GfxState* state) override;
+	void beginTextObject(GfxState* state) override;
+	void endTextObject(GfxState* state) override;
 	void drawChar(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, POPPLER_CONST_082 Unicode* u, int uLen) override;
 	GBool beginType3Char(GfxState* /*state*/, double /*x*/, double /*y*/, double /*dx*/, double /*dy*/, CharCode /*code*/, POPPLER_CONST_082 Unicode* /*u*/, int /*uLen*/) override;
-	void  endType3Char(GfxState* /*state*/) override;
-	void  type3D0(GfxState* /*state*/, double /*wx*/, double /*wy*/) override;
-	void  type3D1(GfxState* /*state*/, double /*wx*/, double /*wy*/, double /*llx*/, double /*lly*/, double /*urx*/, double /*ury*/) override;
+	void endType3Char(GfxState* /*state*/) override;
+	void type3D0(GfxState* /*state*/, double /*wx*/, double /*wy*/) override;
+	void type3D1(GfxState* /*state*/, double /*wx*/, double /*wy*/, double /*llx*/, double /*lly*/, double /*urx*/, double /*ury*/) override;
 	void updateTextMat(GfxState* state) override;
 	void updateTextShift(GfxState* state, double shift) override;
 	static size_t MatchingChars(QString s1, QString sp);
-	QString bestMatchingFont(QString PDFname);
+	//QString bestMatchingFont(QString PDFname);
 private:
 	//void setFillAndStrokeForPDF(GfxState* state, PageItem* text_node);
 	void updateTextPos(GfxState* state) override;
@@ -257,8 +326,7 @@ private:
 	ScFace* getCachedFont(GfxFont* font);
 	ScFace* cachedFont(GfxFont* font);	
 	ScFace* matchScFaceToFamilyAndStyle(const QString& fontName, const QString& font_style_lowercase, bool bold, bool italic);
-	ScFace* makeFont(GfxFont* font, QString cs_font_family, QString font_style_lowercase);
-	ScFace* makeFont();
+	ScFace* makeFont(GfxFont* font, QString cs_font_family, QString font_style_lowercase);	
 
 	std::map<PdfTextFont, ScFace* > m_fontMap = std::map<PdfTextFont, ScFace* >();
 	PdfTextRecognition m_pdfTextRecognition = {};
