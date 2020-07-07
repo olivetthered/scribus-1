@@ -173,7 +173,7 @@ public:
 	bool handleLinkAnnot(Annot* annota, double xCoor, double yCoor, double width, double height);
 	bool handleWidgetAnnot(Annot* annota, double xCoor, double yCoor, double width, double height);
 	static void applyTextStyle(PageItem* ite, const QString& fontName, const QString& textColor, double fontSize);
-	static void applyTextStyle(PageItem* ite, ScFace& face, const QString& textColor, double fontSize, int pos, int len);
+	static void applyTextStyle(PageItem* ite, ScFace& face, const QString& textColor, double fontSize, QPointF scaleFont, int pos, int len);	
 	//static void applyTextStyle(PageItem* ite, ScFace* face, const QString& textColor, double fontSize, int pos, int len);	
 	//static void applyTextStyle(PageItem* ite, const QString& fontName, const QString& textColor, double fontSize, bool bold, bool italic, int pos, int len);
 	void handleActions(PageItem* ite, AnnotWidget *ano);
@@ -269,6 +269,8 @@ public:
 	void updateStrokeColor(GfxState *state) override;
 	void updateFont(GfxState* state) override;
 
+	QPointF getCharBoundingBox(QString source);
+
 	//----- text drawing
 	void  beginTextObject(GfxState *state) override;
 	void  endTextObject(GfxState *state) override;
@@ -289,6 +291,7 @@ public:
 	double cropOffsetY {0.0};
 	int rotate;
 protected:
+	GfxFontType m_fontType;
 	void setFillAndStrokeForPDF(GfxState* state, PageItem* textNode);
 	void applyMask(PageItem* ite);
 	void pushGroup(const QString& maskName = "", GBool forSoftMask = gFalse, GBool alpha = gFalse, bool inverted = false);

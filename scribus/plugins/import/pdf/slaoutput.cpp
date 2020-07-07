@@ -952,10 +952,12 @@ void SlaOutputDev::applyTextStyle(PageItem* ite, const QString& fontName, const 
 	ite->invalid = true;
 }
 
-void SlaOutputDev::applyTextStyle(PageItem* ite, ScFace& face, const QString& textColor, double fontSize, int pos, int len)
+void SlaOutputDev::applyTextStyle(PageItem* ite, ScFace& face, const QString& textColor, double fontSize, QPointF scaleFont, int pos, int len)
 {
 	CharStyle newStyle;
 	bool bolditalic = false;
+	newStyle.setScaleH(scaleFont.x() * 1000.0);
+	newStyle.setScaleV(scaleFont.y() * 1000.0);
 	newStyle.setFillColor(textColor);
 	newStyle.setFontSize(fontSize * 10);	
 	newStyle.setFont(face);
@@ -1351,12 +1353,12 @@ void SlaOutputDev::startDoc(PDFDoc *doc, XRef *xrefA, Catalog *catA)
 	xref = xrefA;
 	catalog = catA;
 	pdfDoc = doc;
-	updateGUICounter = 0;
+	updateGUICounter = 0;		
 #if POPPLER_ENCODED_VERSION >= POPPLER_VERSION_ENCODE(0, 84, 0)
 	m_fontEngine = new SplashFontEngine(true, false, false, true);
 #else
 	m_fontEngine = new SplashFontEngine(globalParams->getEnableFreeType(), false, false, true);
-#endif
+#endif	
 }
 
 void SlaOutputDev::startPage(int pageNum, GfxState *, XRef *)
@@ -3105,6 +3107,7 @@ void SlaOutputDev::updateFont(GfxState *state)
 			fontsrc->setBuf(tmpBuf, tmpBufLen, gTrue);
 
 		// load the font file
+		m_fontType = fontType;
 		switch (fontType) {
 		case fontType1:
 			if (!(fontFile = m_fontEngine->loadType1Font(
@@ -3257,7 +3260,6 @@ void SlaOutputDev::updateFont(GfxState *state)
 	mat[2] = m21;
 	mat[3] = -m22;
 	m_font = m_fontEngine->getFont(fontFile, mat, matrix);
-
 	delete fontLoc;
 	if (fontsrc && !fontsrc->isFile)
 		fontsrc->unref();
@@ -3270,7 +3272,48 @@ err1:
 	if (fontsrc && !fontsrc->isFile)
 		fontsrc->unref();
 }
+QPointF SlaOutputDev::getCharBoundingBox(QString source)
+{
+	QPointF result = { 0.0, 0.0 };
+	if (!m_font)
+		return result;
+	SplashPath* fontPath;
+	double x1, y1, x2, y2;
+	double  yMin = { 0.0 }, yMax = { 0.0 };
+	double charCount = { 0.0 };
+	for (auto ichar = source.begin(); ichar < source.end(); ichar++)
+	{
+		if (m_fontType != fontTrueType && m_fontType != fontTrueTypeOT)
+		{
+			qDebug() << m_fontType;
+		}
+		fontPath = m_font->getGlyphPath((*ichar).unicode());
+		if (fontPath)
+		{
+			if(fontPath->getLength() > 0)
+				charCount++;
+			double xMin = { 0.0 }, xMax = { 0.0 };
+			for (int i = 0; i < fontPath->getLength(); ++i)
+			{
+				Guchar f;				
+				fontPath->getPoint(i, &x1, &y1, &f);
+				xMin = x1 < xMin ? x1 : xMin;
+				yMin = y1 < yMin ? y1 : yMin;
+				xMax = x1 > xMax ? x1 : xMax;
+				yMax = y1 > yMax ? y1 : yMax;
 
+			}			
+			result.setX(result.x() + xMax - xMin);
+			delete fontPath;
+		}
+	}
+	if (charCount > 0.0)
+	{
+		result.setX(result.x() * source.length() / charCount);
+	}
+	result.setY(yMax - yMin);
+	return result;
+}
 void SlaOutputDev::drawChar(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, POPPLER_CONST_082 Unicode* u, int uLen)
 {
 //	qDebug() << "SlaOutputDev::drawChar code:" << code << "bytes:" << nBytes << "Unicode:" << u << "ulen:" << uLen << "render:" << state->getRender();
@@ -3299,6 +3342,20 @@ void SlaOutputDev::drawChar(GfxState* state, double x, double y, double dx, doub
 		fontPath = m_font->getGlyphPath(code);
 		if (fontPath)
 		{
+			double xMin = { 0.0 }, yMin = { 0.0 }, xMax = { 0.0 }, yMax = { 0.0 };
+			for (int i = 0; i < fontPath->getLength(); ++i)
+			{
+				Guchar f;
+				fontPath->getPoint(i, &x1, &y1, &f);
+				xMin = x1 < xMin ? x1 : xMin;
+				yMin = y1 < yMin ? y1 : yMin;
+				xMax = x1 > xMax ? x1 : xMax;
+				yMax = y1 > yMax ? y1 : yMax;
+				
+			}
+			
+			//m_font->getBBox(&xMin, &yMin, &xMax, &yMax);
+			qDebug() << xMin << ":" << yMin << ":" << xMax << ":" << yMax;
 			QPainterPath qPath;
 			qPath.setFillRule(Qt::WindingFill);
 			for (int i = 0; i < fontPath->getLength(); ++i)

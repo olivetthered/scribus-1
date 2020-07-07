@@ -13,6 +13,7 @@ for which a new license (GPL+exception) is in place.
 #endif
 */
 #include <qfontdatabase.h>
+#include "../../../../../scribus-1.5.x-libs-msvc2017/poppler-0.87.0/source/poppler/GfxFont.h"
 
 /*
 *	constructor, initialize the textRegions vector and set the addChar mode
@@ -125,6 +126,12 @@ void PdfTextRecognition::setPdfGlyphStyleScale(double fontScaling)
 	setCharMode(AddCharMode::ADDCHARWITHNEWSTYLE);
 }
 
+void PdfTextRecognition::setPdfGlyphStyleScaleFont(QPointF scaleFont)
+{
+	m_pdfGlyphStyle.scaleFont = scaleFont;
+	newFontAndStyle = true;
+	setCharMode(AddCharMode::ADDCHARWITHNEWSTYLE);	
+}
 /*
 *	basic functionality to be performed when addChar is called
 *	FIXME: what to do when uLen != 1
@@ -300,7 +307,7 @@ bool PdfTextRegion::adjunctLesser(qreal testY, qreal lastY, qreal baseY)
 bool PdfTextRegion::adjunctGreater(qreal testY, qreal lastY, qreal baseY)
 {
 	return (testY <= lastY
-		&& testY >= baseY - lineSpacing().mode() * 0.75
+		&& testY >= baseY - lineSpacing().mode() * 0.82// 0.75
 		&& lastY != baseY);
 }
 
@@ -544,7 +551,7 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 	//FIXME: Make the line absolute position but the segments relative to the line to make character insertion and deletion a lot easier as only the line needs updating not the segments.
 	ParagraphStyle *baseParagraphStyle = &(textNode->changeCurrentStyle());
 	baseParagraphStyle->setLineSpacingMode(ParagraphStyle::LineSpacingMode::FixedLineSpacing);
-	baseParagraphStyle->setLineSpacing(this->lineSpacing().mode() * 0.75);
+	baseParagraphStyle->setLineSpacing(this->lineSpacing().mode() * 0.82/* 0.75*/);
 	textNode->changeCurrentStyle() = *baseParagraphStyle;
 	
 	textNode->setWidthHeight(this->maxWidth(), this->maxHeight());
@@ -568,6 +575,7 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 		SlaOutputDev::applyTextStyle(textNode, pdfTextRegionLines()[i].segments[0].pdfGlyphStyle.face,
 			pdfTextRegionLines()[i].segments[0].pdfGlyphStyle.currColorFill,
 			pdfTextRegionLines()[i].segments[0].pdfGlyphStyle.pointSizeF * pdfTextRegionLines()[i].segments[0].pdfGlyphStyle.fontScaling,
+			pdfTextRegionLines()[i].segments[0].pdfGlyphStyle.scaleFont,
 			pdfTextRegionLines()[i].glyphIndex, (pdfTextRegionLines()[i].segments[0].glyphIndex - pdfTextRegionLines()[i].glyphIndex) + 1);
 		for (int j = 1; j < (int)pdfTextRegionLines()[i].segments.size(); j++)
 		{
@@ -589,6 +597,7 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 			SlaOutputDev::applyTextStyle(textNode, pdfTextRegionLines()[i].segments[j].pdfGlyphStyle.face,
 				pdfTextRegionLines()[i].segments[j].pdfGlyphStyle.currColorFill,
 				pdfTextRegionLines()[i].segments[j].pdfGlyphStyle.pointSizeF * pdfTextRegionLines()[i].segments[j].pdfGlyphStyle.fontScaling,
+				pdfTextRegionLines()[i].segments[j].pdfGlyphStyle.scaleFont,
 				pdfTextRegionLines()[i].segments[j - 1].glyphIndex + 1, (pdfTextRegionLines()[i].segments[j].glyphIndex - pdfTextRegionLines()[i].segments[j - 1].glyphIndex));			
 		}
 
@@ -980,6 +989,20 @@ ScFace* PdfTextOutputDev::getCachedFont(GfxFont* font)
 	}
 	
 }
+QPointF PdfTextOutputDev::cachedScaleFont(GfxFont* font, QPointF scaleFont)
+{
+	PdfTextFont pdfTextFont = PdfTextFont((QString)font->getName()->c_str(), font->isBold(), font->isItalic());
+	auto i = m_scaleFontMap.find(pdfTextFont);
+	if (i != m_scaleFontMap.end())
+	{
+		return (i->second);
+	}
+	else
+	{
+		m_scaleFontMap.insert({ pdfTextFont, scaleFont });
+	}
+	return scaleFont;
+}
 ScFace* PdfTextOutputDev::cachedFont(GfxFont* font)
 {
 	// Store original name	
@@ -1039,18 +1062,26 @@ ScFace* PdfTextOutputDev::cachedFont(GfxFont* font)
 	return face;
 }
 
-ScFace* PdfTextOutputDev::matchScFaceToFamilyAndStyle(const QString& fontName, const QString& font_style_lowercase, bool bold, bool italic)
+ScFace* PdfTextOutputDev::matchScFaceToFamilyAndStyle(const QString& fontName, const QString& font_style_lowercase, bool bold, bool italic, bool oblique)
 {
 	QString newFontName = fontName;
 	//TODO: Set bestFont to a default font;
 	ScFace* bestFont = nullptr;
 	int maxStyle = -1;
+	int bestMatchCharateristicsCount = MAXINT;
 	if (!fontName.isEmpty())
 	{
-		if (bold == false && italic == false && fontName == "Arial")
-		{
-			newFontName = fontName + " Regular";
-		}
+		newFontName = fontName;
+		if (bold == false && italic == false && oblique == false && fontName == "Arial")
+			newFontName = newFontName + "-Regular";
+		//if (bold)
+		//	newFontName = newFontName + "-Bold";
+		//if (italic)
+		//	newFontName = newFontName + "-Italic";
+		if (oblique)
+			newFontName = newFontName + "-Oblique";
+		newFontName = newFontName.toLower();
+		QStringList familyNameAndCharacteristicsPDF = newFontName.split("-");  //also Camel case sometimes.
 		SCFontsIterator it(*m_doc->AllFonts);
 		for (; it.hasNext(); it.next())
 		{
@@ -1058,49 +1089,48 @@ ScFace* PdfTextOutputDev::matchScFaceToFamilyAndStyle(const QString& fontName, c
 			int style = 0;			
 			if ((face.usable()) && (face.type() == ScFace::TTF))
 			{
-
 				if (face.isBold() == bold)
-				{
 					style++;
-				}
 				if (face.isItalic() == italic)
-				{
 					style++;
-				}				
-			
-				if (face.psName() == newFontName)
-				{
-					style++;
-					style++;
-				} 
+				//if (face.psName() == newFontName)				
+				//	style+=2;
+				//else
+				//{					
+					auto fontname = face.scName().toLower();
 
-				else if (face.scName() == newFontName)
-				{
-					style++;
-					style++;
-				}
-				else
-				{
-					if (newFontName.contains(face.family()))
-					{
-						style++;
-					}
+					//qDebug() << "_bestMatchingFont():" << PDFname;					
 
-					if (newFontName.contains(face.style()))
+					QStringList familyNameAndCharacteristicsAF = fontname.split(" ");					
+					size_t matchingItems = CountMatchingStringListItems(familyNameAndCharacteristicsAF, familyNameAndCharacteristicsPDF);
+					style += matchingItems;
+					if (style > maxStyle || style == maxStyle && familyNameAndCharacteristicsAF.size() < bestMatchCharateristicsCount)
 					{
-						style++;
+						maxStyle = style;
+						bestFont = &face;
+						bestMatchCharateristicsCount = familyNameAndCharacteristicsAF.size();
+						qDebug() << face.scName().toLower() << newFontName;
 					}
-				}
-				if (style > maxStyle)
-				{
-					maxStyle = style;
-					bestFont = &face;
-				}
 			}
 		}
-	}
+	}	
 	return bestFont;
 }
+QPointF PdfTextOutputDev::geSctFontBBox(ScFace* face, double fontSize)
+{
+	QString pdfFontBBoxAsString = "qwertyuiopQWERTYUIOP1234567890!\"£$%^&*()ZXCVBNM<>?/.,mnbvvcxz:@~#';{}][|\\";
+	QPointF result = { 0,0 };
+	//qDebug() << pdfFontBBoxAsString;
+	for (auto ichar = pdfFontBBoxAsString.begin(); ichar < pdfFontBBoxAsString.end(); ichar++)
+	{
+		//qDebug() << face->glyphBBox(face->char2CMap((*ichar).unicode())).width << ":" << face->glyphBBox(face->char2CMap((*ichar).unicode())).ascent << ":" << face->glyphBBox(face->char2CMap((*ichar).unicode())).descent;
+		result.setX(result.x() + face->glyphBBox(face->char2CMap((*ichar).unicode()), m_fontScaling* 0.82* fontSize).width);
+		//FIXME: Calculate the proper bounding box
+		result.setY(result.y() > face->glyphBBox(face->char2CMap((*ichar).unicode()), m_fontScaling *0.82* fontSize).ascent + face->glyphBBox(face->char2CMap((*ichar).unicode()), m_fontScaling * 0.82).descent ? result.y() : face->glyphBBox(face->char2CMap((*ichar).unicode()), m_fontScaling * 0.82* fontSize).ascent + face->glyphBBox(face->char2CMap((*ichar).unicode()), m_fontScaling * 0.82* fontSize).descent);
+	}
+	return result;
+}
+
 ScFace* PdfTextOutputDev::makeFont(GfxFont* font, QString cs_font_family, QString font_style_lowercase)
 {
 	bool italic = false;
@@ -1134,7 +1164,7 @@ ScFace* PdfTextOutputDev::makeFont(GfxFont* font, QString cs_font_family, QStrin
 		if (font_weight == GfxFont::W700)
 			bold = true;
 
-		return matchScFaceToFamilyAndStyle(cs_font_family, font_style_lowercase, bold, italic);
+		return matchScFaceToFamilyAndStyle(cs_font_family, font_style_lowercase, bold, italic, oblique);
 			//m_pdfGlyphStyle.font.setWeight(QFont::Bold);
 
 	/*  ScFace doesn't support font streach
@@ -1193,12 +1223,22 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 	qDebug() << "m_lastFontSpecification:" << m_lastFontSpecification;
 #endif
 	m_previouisGlyphStyle = m_pdfGlyphStyle;
-
+	QPointF scaleFont = { 1.0, 1.0 };
 	ScFace* face = getCachedFont(font);
 	if (face == nullptr)
 	{
 		face = cachedFont(font);
+		SlaOutputDev::updateFont(state);
+		QPointF bboxPdfFont = SlaOutputDev::getCharBoundingBox("qwertyuiopQWERTYUIOP1234567890!\"£$%^&*()ZXCVBNM<>?/.,mnbvvcxz:@~#';{}][|\\");
+		QPointF bboxScFaceFont = geSctFontBBox(face, state->getFontSize());
+		qDebug() << bboxPdfFont << ":" << bboxScFaceFont;
+		if (bboxScFaceFont.y() > 0 && bboxScFaceFont.x() > 0 && bboxPdfFont.y() > 0 && bboxPdfFont.x() > 0)
+		{
+			scaleFont.setY(bboxPdfFont.y() / bboxScFaceFont.y());
+			scaleFont.setX(bboxPdfFont.x() / bboxScFaceFont.x());
+		}		
 	}
+	scaleFont = cachedScaleFont(font, scaleFont);
 
 	//I think font scaling should be handled outside this function like things like colour are. convert pixels to points 0.75
 	m_pdfGlyphStyle.face = *face;	
@@ -1208,9 +1248,9 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 #endif
 	//if (css_font_size == 0)
 	//	css_font_size = 1;
-	m_pdfGlyphStyle.pointSizeF = state->getFontSize() * 0.75;//. css_font_size;
+	m_pdfGlyphStyle.pointSizeF = state->getFontSize() * 0.82;// 75;//. css_font_size;
 	m_pdfGlyphStyle.fontScaling = m_fontScaling;
-
+	m_pdfGlyphStyle.scaleFont = scaleFont;
 #ifdef DEBUG_TEXT_IMPORT_FONTS
 	/* TODO: Update this debug coded to use ScFace
 	if (m_pdfGlyphStyle.font.key() == origional_font_style.key() || m_pdfGlyphStyle.font.toString() == origional_font_style.toString())
@@ -1235,6 +1275,7 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 		m_pdfTextRecognition.setPdfGlyphStyleFace(m_pdfGlyphStyle.face);
 		m_pdfTextRecognition.setPdfGlyphStyleSizeF(m_pdfGlyphStyle.pointSizeF);
 		m_pdfTextRecognition.setPdfGlyphStyleScale(m_pdfGlyphStyle.fontScaling);
+		m_pdfTextRecognition.setPdfGlyphStyleScaleFont(m_pdfGlyphStyle.scaleFont);
 		m_pdfTextRecognition.setCharMode(PdfTextRecognition::AddCharMode::ADDCHARWITHBASESTLYE);
 	}
 	
@@ -1341,7 +1382,7 @@ static int CountMatchingStringListItems(QStringList& listA, QStringList& listB)
 	{
 		for (auto listelementB : listB)
 		{
-			if (listelementA.toLower() == listelementB.toLower())
+			if (listelementA.contains(listelementB) || listelementB.contains(listelementA))
 			{
 				matchCount++;
 			}

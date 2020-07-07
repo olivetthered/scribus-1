@@ -55,6 +55,7 @@ public:
 	// font size in points;
 	double pointSizeF = { 1.0 };
 	double fontScaling = { 1.0 };
+	QPointF scaleFont = {1.0, 1.0};
 	QString toString(void) 
 	{
 		QTextStream result;
@@ -279,6 +280,7 @@ public:
 	void setPdfGlyphStyleFace(ScFace& face);
 	void setPdfGlyphStyleSizeF(double pointSizeF);
 	void setPdfGlyphStyleScale(double fontScaling);
+	void setPdfGlyphStyleScaleFont(QPointF scaleFont);
 
 	bool newFontAndStyle = false;
 private:
@@ -324,11 +326,14 @@ private:
 	void renderTextFrame();
 	void finishItem(PageItem* item);
 	ScFace* getCachedFont(GfxFont* font);
+	QPointF cachedScaleFont(GfxFont* font, QPointF scaleFont);
 	ScFace* cachedFont(GfxFont* font);	
-	ScFace* matchScFaceToFamilyAndStyle(const QString& fontName, const QString& font_style_lowercase, bool bold, bool italic);
+	ScFace* matchScFaceToFamilyAndStyle(const QString& fontName, const QString& font_style_lowercase, bool bold, bool italic, bool oblique);
+	QPointF geSctFontBBox(ScFace* face, double fontSize);	
 	ScFace* makeFont(GfxFont* font, QString cs_font_family, QString font_style_lowercase);	
 
 	std::map<PdfTextFont, ScFace* > m_fontMap = std::map<PdfTextFont, ScFace* >();
+	std::map<PdfTextFont, QPointF > m_scaleFontMap = std::map<PdfTextFont, QPointF >();	
 	PdfTextRecognition m_pdfTextRecognition = {};
 	PdfGlyphStyle m_pdfGlyphStyle = {};	
 	PdfGlyphStyle m_previouisGlyphStyle = {};	
@@ -361,5 +366,6 @@ static char* font_weight_translator[][2] = {
 	{(char*)"thin",        (char*)"100"}
 };
 
+static int CountMatchingStringListItems(QStringList& listA, QStringList& listB);
 
 #endif
