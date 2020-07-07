@@ -1126,13 +1126,15 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 
 	}
 #endif
-	if (m_pdfGlyphStyle.font.key() == origional_font_style.key() || m_pdfGlyphStyle.font.toString() == origional_font_style.toString())
+	// Should only have to update the font if it's actually changed
+	if (m_pdfGlyphStyle.font.key() != origional_font_style.key() && m_pdfGlyphStyle.font.toString() != origional_font_style.toString())
 	{
 		m_pdfTextRecognition.setFillColour(m_pdfGlyphStyle.currColorFill);
 		m_pdfTextRecognition.setStrokeColour(m_pdfGlyphStyle.currColorStroke);
 		m_pdfTextRecognition.setPdfGlyphStyleFont(m_pdfGlyphStyle.font);
 		m_pdfTextRecognition.setCharMode(PdfTextRecognition::AddCharMode::ADDCHARWITHBASESTLYE);
 	}
+	
 }
 
 void PdfTextOutputDev::updateFillColor(GfxState* state)
