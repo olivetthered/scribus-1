@@ -3272,7 +3272,7 @@ err1:
 	if (fontsrc && !fontsrc->isFile)
 		fontsrc->unref();
 }
-QPointF SlaOutputDev::getCharBoundingBox(QString source)
+QPointF SlaOutputDev::getCharBoundingBox(QString source, QString& matchedGlyphs)
 {
 	QPointF result = { 0.0, 0.0 };
 	if (!m_font)
@@ -3283,15 +3283,19 @@ QPointF SlaOutputDev::getCharBoundingBox(QString source)
 	double charCount = { 0.0 };
 	for (auto ichar = source.begin(); ichar < source.end(); ichar++)
 	{
-		if (m_fontType != fontTrueType && m_fontType != fontTrueTypeOT)
-		{
-			qDebug() << m_fontType;
-		}
+		//if (m_fontType != fontTrueType && m_fontType != fontTrueTypeOT)
+		//{
+		//	qDebug() << m_fontType;
+		//}
 		fontPath = m_font->getGlyphPath((*ichar).unicode());
 		if (fontPath)
 		{
-			if(fontPath->getLength() > 0)
+			if (fontPath->getLength() > 0)
+			{
+				qDebug() << (*ichar);
 				charCount++;
+				matchedGlyphs += (*ichar);
+			}
 			double xMin = { 0.0 }, xMax = { 0.0 };
 			for (int i = 0; i < fontPath->getLength(); ++i)
 			{
@@ -3309,7 +3313,7 @@ QPointF SlaOutputDev::getCharBoundingBox(QString source)
 	}
 	if (charCount > 0.0)
 	{
-		result.setX(result.x() * source.length() / charCount);
+		result.setX(result.x());// *source.length() / charCount);
 	}
 	result.setY(yMax - yMin);
 	return result;

@@ -269,7 +269,7 @@ public:
 	void updateStrokeColor(GfxState *state) override;
 	void updateFont(GfxState* state) override;
 
-	QPointF getCharBoundingBox(QString source);
+	QPointF getCharBoundingBox(QString source, QString& matchedGlyphs);
 
 	//----- text drawing
 	void  beginTextObject(GfxState *state) override;

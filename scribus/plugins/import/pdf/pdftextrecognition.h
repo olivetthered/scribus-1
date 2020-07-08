@@ -329,7 +329,7 @@ private:
 	QPointF cachedScaleFont(GfxFont* font, QPointF scaleFont);
 	ScFace* cachedFont(GfxFont* font);	
 	ScFace* matchScFaceToFamilyAndStyle(const QString& fontName, const QString& font_style_lowercase, bool bold, bool italic, bool oblique);
-	QPointF geSctFontBBox(ScFace* face, double fontSize);	
+	QPointF geSctFontBBox(ScFace* face, double fontSize, QString pdfFontBBoxAsString);	
 	ScFace* makeFont(GfxFont* font, QString cs_font_family, QString font_style_lowercase);	
 
 	std::map<PdfTextFont, ScFace* > m_fontMap = std::map<PdfTextFont, ScFace* >();

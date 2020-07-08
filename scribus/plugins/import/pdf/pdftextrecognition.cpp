@@ -307,7 +307,7 @@ bool PdfTextRegion::adjunctLesser(qreal testY, qreal lastY, qreal baseY)
 bool PdfTextRegion::adjunctGreater(qreal testY, qreal lastY, qreal baseY)
 {
 	return (testY <= lastY
-		&& testY >= baseY - lineSpacing().mode() * 0.82// 0.75
+		&& testY >= baseY - lineSpacing().mode() * 0.75// 0.75
 		&& lastY != baseY);
 }
 
@@ -493,8 +493,8 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 	//qDebug() << "addGlyphAtPoint: newGlyphPoint:" << newGlyphPoint << " char:" << (QChar)newGlyph.code;
 	QPointF movedGlyphPoint = QPointF(newGlyphPoint.x() + newGlyph.dx, newGlyphPoint.y() + newGlyph.dy);
 	if (glyphs.size() == 1)
-	{		
-		lineSpacing().add(m_newFontStyleToApply->face.height() * m_newFontStyleToApply->pointSizeF * m_newFontStyleToApply->fontScaling);
+	{				
+		lineSpacing().add((m_newFontStyleToApply->face.height() - m_newFontStyleToApply->face.descent() )* m_newFontStyleToApply->pointSizeF * m_newFontStyleToApply->fontScaling);
 		setFontAssending(m_newFontStyleToApply->face.ascent() * m_newFontStyleToApply->pointSizeF * m_newFontStyleToApply->fontScaling);
 		setLastXY(newGlyphPoint);
 		setLineBaseXY(newGlyphPoint);
@@ -510,7 +510,7 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 	{
 		mode = LineType::SAMELINE;
 	}
-	setMaxHeight( abs(pdfTextRegionBasenOrigin().y() - movedGlyphPoint.y()) + lineSpacing().mode() > maxHeight() ? abs(pdfTextRegionBasenOrigin().y() - movedGlyphPoint.y()) + lineSpacing().mode() : maxHeight());
+	setMaxHeight( abs(pdfTextRegionBasenOrigin().y() - movedGlyphPoint.y()) + lineSpacing().mode() - (m_newFontStyleToApply->face.descent() * m_newFontStyleToApply->pointSizeF * m_newFontStyleToApply->fontScaling) > maxHeight() ? abs(pdfTextRegionBasenOrigin().y() - movedGlyphPoint.y()) + lineSpacing().mode() - (m_newFontStyleToApply->face.descent() * m_newFontStyleToApply->pointSizeF * m_newFontStyleToApply->fontScaling) : maxHeight());
 	PdfTextRegionLine* pdfTextRegionLine = &pdfTextRegionLines().back();
 	if (mode == LineType::NEWLINE || mode == LineType::FIRSTPOINT)
 	{
@@ -551,7 +551,7 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 	//FIXME: Make the line absolute position but the segments relative to the line to make character insertion and deletion a lot easier as only the line needs updating not the segments.
 	ParagraphStyle *baseParagraphStyle = &(textNode->changeCurrentStyle());
 	baseParagraphStyle->setLineSpacingMode(ParagraphStyle::LineSpacingMode::FixedLineSpacing);
-	baseParagraphStyle->setLineSpacing(this->lineSpacing().mode() * 0.82/* 0.75*/);
+	baseParagraphStyle->setLineSpacing(this->lineSpacing().mode() * 0.90/* 0.75*/);
 	textNode->changeCurrentStyle() = *baseParagraphStyle;
 	
 	textNode->setWidthHeight(this->maxWidth(), this->maxHeight());
@@ -603,12 +603,14 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 
 	}
 	textNode->frameTextEnd();
+	textNode->invalidateLayout();
 }
 void PdfTextRegion::doBreaksAndSpaces(void)
 {
 	if (pdfTextRegionLines().size() < 2)
 		return;
 	int increment = 0;
+	int exctraLines = 0;
 	int lastY = pdfTextRegionLines().front().baseOrigin.y();
 	for (auto line = pdfTextRegionLines().begin(); line < pdfTextRegionLines().end() - 1; line++)
 	{
@@ -617,10 +619,12 @@ void PdfTextRegion::doBreaksAndSpaces(void)
 		if ((*line).width < maxWidth() - 8 || ((line < pdfTextRegionLines().end() - 1) &&  (*(line + 1)).maxHeight > lineSpacing().mode() * 1.5))
 		{
 			insertChar(line, increment, QChar::SpecialCharacter::LineSeparator);
+			//exctraLines++;
 			if ((line <  pdfTextRegionLines().end() - 1) && (*(line + 1)).maxHeight > lineSpacing().mode() * 1.5) //FIXME: The line itself should really be of the correct height, not the following line.
 			{
 				increment++;
 				insertChar(line, 1, QChar::SpecialCharacter::LineSeparator); //FIXME: this should be SpecialChars::PARSEP but it needs continuity of style
+				exctraLines++;
 			}
 		}
 		else
@@ -629,6 +633,12 @@ void PdfTextRegion::doBreaksAndSpaces(void)
 		}
 		lastY = (*line).baseOrigin.y();
 	}
+	if ((pdfTextRegionLines().size() + exctraLines) * lineSpacing().mode() * 0.9 > maxHeight())
+	{
+		setMaxHeight((pdfTextRegionLines().size() + exctraLines + 0.5) * lineSpacing().mode() * 0.9);
+	}
+	lastY -= m_lineSpacing.mode();// *(exctraLines + 2) - (pdfTextRegionLines().front().baseOrigin.y() - fontAssending());
+	qDebug() << glyphs[0].code << glyphs[1].code << glyphs[2].code << glyphs[3].code << glyphs[4].code << glyphs[5].code << " maxHeight:" << maxHeight() <<" size:"<< pdfTextRegionLines().size() << " mode:"<< lineSpacing().mode() << " exctraLines:"<< exctraLines<< " total:"<<  (pdfTextRegionLines().size() + exctraLines) * lineSpacing().mode()*0.9   << " lastY:" << lastY << " lastXY:"<< lastXY().y() << " baseOriginY:" << pdfTextRegionLines().front().baseOrigin.y();
 	pdfTextRegionLines().back().glyphIndex += increment;
 	for (auto segment = pdfTextRegionLines().back().segments.begin(); segment < pdfTextRegionLines().back().segments.end(); segment++)
 	{
@@ -878,6 +888,50 @@ void PdfTextOutputDev::renderTextFrame()
 	textNode->SetFrameShape(32, PdfTextRegion::boundingBoxShape);
 	textNode->ContourLine = textNode->PoLine.copy();
 
+	textNode->invalidateLayout();
+	textNode->update();
+	textNode->updateLayout();
+	textNode->frameTextEnd();
+	//textNode->SetFrameShape(32, PdfTextRegion::boundingBoxShape);
+	//textNode->ContourLine = textNode->PoLine.copy();
+	if (textNode->frameOverflows())
+	{		
+		qDebug() << "Widsth:" << textNode->width() << "heigth:" << textNode->height() << "Frame overflows by : " << textNode->frameOverflowCount();
+		qreal fontSZcale = activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.fontScaling * activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.pointSizeF;
+		qreal newwIDTH = textNode->width()
+			+ activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.face.glyphWidth(
+				activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.face.char2CMap(((QChar)'M').unicode())
+				, fontSZcale);
+		textNode->setWidthHeight(newwIDTH, textNode->height());
+		//textNode->frameTextEnd();
+		textNode->SetFrameShape(32, PdfTextRegion::boundingBoxShape);
+		textNode->ContourLine = textNode->PoLine.copy();
+		//textNode->invalidateLayout();
+		//textNode->update();
+		textNode->updateLayout();
+		//textNode->frameTextEnd();
+
+		//textNode->doc()->adjustItemSize(textNode, false);
+		qDebug() << "Widsth:" << textNode->width() << "heigth:" << textNode->height() << "Frame overflows by : " << textNode->frameOverflowCount() << ": " << textNode->frameUnderflows();
+		if (textNode->frameOverflows())
+		{
+			qDebug() << "Widsth:" << textNode->width() << "heigth:" << textNode->height() << "Frame overflows by : " << textNode->frameOverflowCount();
+			qreal fontSZcale = activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.fontScaling * activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.pointSizeF;
+			qreal newwIDTH = textNode->width()
+				+ 0.4 * activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.face.glyphWidth(
+					activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.face.char2CMap(((QChar)'M').unicode())
+					, fontSZcale);
+			textNode->setWidthHeight(newwIDTH, textNode->height());
+			//textNode->frameTextEnd();
+			textNode->SetFrameShape(32, PdfTextRegion::boundingBoxShape);
+			textNode->ContourLine = textNode->PoLine.copy();
+			//textNode->invalidateLayout();
+			//textNode->update();
+			textNode->updateLayout();
+			//textNode->frameTextEnd();
+		}
+	}
+
 	m_Elements->append(textNode);
 	if (m_groupStack.count() != 0)
 	{
@@ -1116,17 +1170,16 @@ ScFace* PdfTextOutputDev::matchScFaceToFamilyAndStyle(const QString& fontName, c
 	}	
 	return bestFont;
 }
-QPointF PdfTextOutputDev::geSctFontBBox(ScFace* face, double fontSize)
-{
-	QString pdfFontBBoxAsString = "qwertyuiopQWERTYUIOP1234567890!\"£$%^&*()ZXCVBNM<>?/.,mnbvvcxz:@~#';{}][|\\";
+QPointF PdfTextOutputDev::geSctFontBBox(ScFace* face, double fontSize, QString pdfFontBBoxAsString)
+{	 
 	QPointF result = { 0,0 };
 	//qDebug() << pdfFontBBoxAsString;
 	for (auto ichar = pdfFontBBoxAsString.begin(); ichar < pdfFontBBoxAsString.end(); ichar++)
 	{
 		//qDebug() << face->glyphBBox(face->char2CMap((*ichar).unicode())).width << ":" << face->glyphBBox(face->char2CMap((*ichar).unicode())).ascent << ":" << face->glyphBBox(face->char2CMap((*ichar).unicode())).descent;
-		result.setX(result.x() + face->glyphBBox(face->char2CMap((*ichar).unicode()), m_fontScaling* 0.82* fontSize).width);
+		result.setX(result.x() + face->glyphBBox(face->char2CMap((*ichar).unicode()), m_fontScaling* 0.90* fontSize).width);
 		//FIXME: Calculate the proper bounding box
-		result.setY(result.y() > face->glyphBBox(face->char2CMap((*ichar).unicode()), m_fontScaling *0.82* fontSize).ascent + face->glyphBBox(face->char2CMap((*ichar).unicode()), m_fontScaling * 0.82).descent ? result.y() : face->glyphBBox(face->char2CMap((*ichar).unicode()), m_fontScaling * 0.82* fontSize).ascent + face->glyphBBox(face->char2CMap((*ichar).unicode()), m_fontScaling * 0.82* fontSize).descent);
+		result.setY(result.y() > face->glyphBBox(face->char2CMap((*ichar).unicode()), m_fontScaling * 0.90 * fontSize).ascent - face->glyphBBox(face->char2CMap((*ichar).unicode()), m_fontScaling * 0.90).descent ? result.y() : face->glyphBBox(face->char2CMap((*ichar).unicode()), m_fontScaling * 0.90 * fontSize).ascent - face->glyphBBox(face->char2CMap((*ichar).unicode()), m_fontScaling * 0.90 * fontSize).descent);
 	}
 	return result;
 }
@@ -1229,13 +1282,14 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 	{
 		face = cachedFont(font);
 		SlaOutputDev::updateFont(state);
-		QPointF bboxPdfFont = SlaOutputDev::getCharBoundingBox("qwertyuiopQWERTYUIOP1234567890!\"£$%^&*()ZXCVBNM<>?/.,mnbvvcxz:@~#';{}][|\\");
-		QPointF bboxScFaceFont = geSctFontBBox(face, state->getFontSize());
+		QString matchedGlyphs = "";
+		QPointF bboxPdfFont = SlaOutputDev::getCharBoundingBox("qwertyuiopQWERTYUIOP1234567890!\"£$%^&*()ZXCVBNM<>?/.,mnbvvcxz:@~#';{}][|\\asdfghjklASDFGHJKL", matchedGlyphs);
+		QPointF bboxScFaceFont = geSctFontBBox(face, state->getFontSize(), matchedGlyphs);// "qwertyuiopQWERTYUIOP1234567890!\"£$%^&*()ZXCVBNM<>?/.,mnbvvcxz:@~#';{}][|\\asdfghjklASDFGHJKL";);
 		qDebug() << bboxPdfFont << ":" << bboxScFaceFont;
 		if (bboxScFaceFont.y() > 0 && bboxScFaceFont.x() > 0 && bboxPdfFont.y() > 0 && bboxPdfFont.x() > 0)
 		{
 			scaleFont.setY(bboxPdfFont.y() / bboxScFaceFont.y());
-			scaleFont.setX(bboxPdfFont.x() / bboxScFaceFont.x());
+			scaleFont.setX((bboxPdfFont.x() / bboxScFaceFont.x()) * 0.95);
 		}		
 	}
 	scaleFont = cachedScaleFont(font, scaleFont);
@@ -1248,7 +1302,7 @@ void PdfTextOutputDev::updateFont(GfxState* state)
 #endif
 	//if (css_font_size == 0)
 	//	css_font_size = 1;
-	m_pdfGlyphStyle.pointSizeF = state->getFontSize() * 0.82;// 75;//. css_font_size;
+	m_pdfGlyphStyle.pointSizeF = state->getFontSize() * 0.90;// 75;//. css_font_size;
 	m_pdfGlyphStyle.fontScaling = m_fontScaling;
 	m_pdfGlyphStyle.scaleFont = scaleFont;
 #ifdef DEBUG_TEXT_IMPORT_FONTS
@@ -1428,7 +1482,7 @@ QString PdfTextOutputDev::bestMatchingFont(QString PDFname)
 qreal ModeArray::add(qreal value)
 {
 	int iValue = value * 10;
-	value = static_cast<qreal>(iValue) / 10.0;
+	value = static_cast<qreal>(iValue) / 10;
 	qreal result = 1;
 	auto node = m_modeArrayMap.find(value);
 	if (node != m_modeArrayMap.end())
