@@ -887,48 +887,35 @@ void PdfTextOutputDev::renderTextFrame()
 	*/
 	textNode->SetFrameShape(32, PdfTextRegion::boundingBoxShape);
 	textNode->ContourLine = textNode->PoLine.copy();
-
-	textNode->invalidateLayout();
-	textNode->update();
 	textNode->updateLayout();
-	textNode->frameTextEnd();
-	//textNode->SetFrameShape(32, PdfTextRegion::boundingBoxShape);
-	//textNode->ContourLine = textNode->PoLine.copy();
+
 	if (textNode->frameOverflows())
 	{		
-		qDebug() << "Widsth:" << textNode->width() << "heigth:" << textNode->height() << "Frame overflows by : " << textNode->frameOverflowCount();
+		//qDebug() << "Widsth:" << textNode->width() << "heigth:" << textNode->height() << "Frame overflows by : " << textNode->frameOverflowCount();
 		qreal fontSZcale = activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.fontScaling * activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.pointSizeF;
 		qreal newwIDTH = textNode->width()
 			+ activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.face.glyphWidth(
 				activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.face.char2CMap(((QChar)'M').unicode())
 				, fontSZcale);
 		textNode->setWidthHeight(newwIDTH, textNode->height());
-		//textNode->frameTextEnd();
 		textNode->SetFrameShape(32, PdfTextRegion::boundingBoxShape);
 		textNode->ContourLine = textNode->PoLine.copy();
-		//textNode->invalidateLayout();
-		//textNode->update();
 		textNode->updateLayout();
-		//textNode->frameTextEnd();
 
-		//textNode->doc()->adjustItemSize(textNode, false);
 		qDebug() << "Widsth:" << textNode->width() << "heigth:" << textNode->height() << "Frame overflows by : " << textNode->frameOverflowCount() << ": " << textNode->frameUnderflows();
 		if (textNode->frameOverflows())
 		{
-			qDebug() << "Widsth:" << textNode->width() << "heigth:" << textNode->height() << "Frame overflows by : " << textNode->frameOverflowCount();
+			//qDebug() << "Widsth:" << textNode->width() << "heigth:" << textNode->height() << "Frame overflows by : " << textNode->frameOverflowCount();
 			qreal fontSZcale = activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.fontScaling * activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.pointSizeF;
 			qreal newwIDTH = textNode->width()
 				+ 0.4 * activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.face.glyphWidth(
 					activePdfTextRegion->pdfTextRegionLines().begin()->segments[0].pdfGlyphStyle.face.char2CMap(((QChar)'M').unicode())
 					, fontSZcale);
-			textNode->setWidthHeight(newwIDTH, textNode->height());
-			//textNode->frameTextEnd();
+			textNode->setWidthHeight(newwIDTH, textNode->height());			
 			textNode->SetFrameShape(32, PdfTextRegion::boundingBoxShape);
 			textNode->ContourLine = textNode->PoLine.copy();
-			//textNode->invalidateLayout();
-			//textNode->update();
 			textNode->updateLayout();
-			//textNode->frameTextEnd();
+			
 		}
 	}
 

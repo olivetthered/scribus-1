@@ -10,6 +10,7 @@ for which a new license (GPL+exception) is in place.
 #include <poppler/GlobalParams.h>
 #include <poppler/poppler-config.h>
 #include <poppler/FileSpec.h>
+#include <poppler/FontInfo.h>
 #include <poppler/fofi/FoFiTrueType.h>
 #include <QApplication>
 #include <QFile>
@@ -1358,7 +1359,14 @@ void SlaOutputDev::startDoc(PDFDoc *doc, XRef *xrefA, Catalog *catA)
 	m_fontEngine = new SplashFontEngine(true, false, false, true);
 #else
 	m_fontEngine = new SplashFontEngine(globalParams->getEnableFreeType(), false, false, true);
-#endif	
+#endif
+	FontInfoScanner *fis = new FontInfoScanner(doc);
+	std::vector<FontInfo *> fi = fis->scan(doc->getNumPages());
+	for (auto it = fi.begin(); it != fi.end(); ++it)
+	{
+		qDebug() << "name:" << ((*it)->getName() ? (*it)->getName()->c_str() : "unnamed" )<< " type:"<< (*it)->getType();
+	}
+	delete fis;
 }
 
 void SlaOutputDev::startPage(int pageNum, GfxState *, XRef *)
