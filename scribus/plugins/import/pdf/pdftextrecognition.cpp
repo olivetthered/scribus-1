@@ -31,7 +31,7 @@ void PdfTextRecognition::MergeAjacentRegions()
 	int index = -1;
 	for (auto textRegion = m_pdfTextRegions.begin(); textRegion < m_pdfTextRegions.end(); textRegion++)
 	{
-		qDebug() << (*textRegion)->glyphs.front().code;
+		//qDebug() << (*textRegion)->glyphs.front().code;
 		index++;
 		bool mergedOrDropped = false;
 		if ((*textRegion)->pdfTextRegionLines.size() == 1)
@@ -52,12 +52,14 @@ void PdfTextRecognition::MergeAjacentRegions()
 						mergedOrDropped = true;
 						break;
 					}
+					/*
 					else if((*textRegion)->glyphs.back().code == ' ' && (*textRegion)->glyphs.size() == 1)
 					{
 						whiteSpaceToDrop.push_back(index);
 						//mergedOrDropped = true;
 						//break;
 					}
+					*/
 				}
 				else
 				{
@@ -122,7 +124,7 @@ void PdfTextRecognition::MergeAjacentRegions()
 	index = -1;
 	for (auto textRegion = m_pdfTextRegions.begin(); textRegion < m_pdfTextRegions.end(); textRegion++)
 	{
-		qDebug() << (*textRegion)->glyphs.front().code;
+		//qDebug() << (*textRegion)->glyphs.front().code;
 		index++;
 		bool mergedOrDropped = false;
 		if ((*textRegion)->pdfTextRegionLines.size() == 1)
@@ -133,16 +135,16 @@ void PdfTextRecognition::MergeAjacentRegions()
 				{
 					if ((*textRegion)->lineBaseXY.x() > 337.720 && (*textRegion)->lineBaseXY.x() < 337.800 && (*textRegion)->lineBaseXY.y() < 485.36 && (*textRegion)->lineBaseXY.y() > 484.36)
 					{
-						qDebug() << "why doeds this fail?";
+						//qDebug() << "why doeds this fail?";
 					}
 					PdfTextRegion::LineType lineMatchType = (*mergeRegion)->isRegionConcurrent((*textRegion)->lineBaseXY);
 
 					if (lineMatchType != PdfTextRegion::LineType::FAIL)
 					{
-						qDebug() << "lineMatchType:" << (int)lineMatchType;
+						//qDebug() << "lineMatchType:" << (int)lineMatchType;
 						if ((*textRegion)->glyphs.front().code != ' ' || (*mergeRegion)->glyphs.back().code != ' ')
 						{
-							qDebug() << "merging point:" << (*textRegion)->lastXY << " base:" << (*textRegion)->lineBaseXY << " mergeregion lastxy" << (*mergeRegion)->lastXY << " base:" << (*mergeRegion)->lineBaseXY;
+							//qDebug() << "merging point:" << (*textRegion)->lastXY << " base:" << (*textRegion)->lineBaseXY << " mergeregion lastxy" << (*mergeRegion)->lastXY << " base:" << (*mergeRegion)->lineBaseXY;
 							(*mergeRegion)->Merge((*textRegion));
 							toDrop.push_back(index);
 						}
@@ -155,7 +157,7 @@ void PdfTextRecognition::MergeAjacentRegions()
 					}
 					else
 					{
-						qDebug() << "linematch == fail lasyxy:" << (*mergeRegion)->lastXY << " linebasexy:" << (*textRegion)->lineBaseXY;
+						//qDebug() << "linematch == fail lasyxy:" << (*mergeRegion)->lastXY << " linebasexy:" << (*textRegion)->lineBaseXY;
 					}
 				}
 				else
@@ -168,23 +170,23 @@ void PdfTextRecognition::MergeAjacentRegions()
 		}
 		else
 		{
-			qDebug() << "more than one line";
+			//qDebug() << "more than one line";
 		}
 		if (mergedOrDropped == false && (*textRegion)->pdfTextRegionLines.size() == 1)
 		{
-			qDebug() << "newmnergepoint:" << (*textRegion)->lastXY << " base:" << (*textRegion)->lineBaseXY;
+			//qDebug() << "newmnergepoint:" << (*textRegion)->lastXY << " base:" << (*textRegion)->lineBaseXY;
 			//auto mergeRegion = toMerge.begin();
 			toMerge.insert(toMerge.begin(), (*textRegion));
 			toKeep.push_back(index);
 		}
 		else if (mergedOrDropped == false && (*textRegion)->pdfTextRegionLines.size() > 1)
 		{
-			qDebug() << "lines:" << (*textRegion)->pdfTextRegionLines.size();
+			//qDebug() << "lines:" << (*textRegion)->pdfTextRegionLines.size();
 			toKeep.push_back(index);
 		}
 		else if (mergedOrDropped == false)
 		{
-			qDebug() << "dropping:" << index;
+			//qDebug() << "dropping:" << index;
 			toDrop.push_back(index);
 		}
 	}
@@ -471,7 +473,7 @@ PdfTextRegion::LineType PdfTextRegion::linearTest(QPointF point, bool xInLimits,
 {
 	if (point == QPointF(93.729, 532.32))
 	{
-		qDebug() << "********************************************************************************************************";
+		//qDebug() << "********************************************************************************************************";
 	}
 	if (collinear(point.y(), lastXY.y()))
 	{
@@ -733,7 +735,7 @@ void PdfTextRegion::renderToTextFrame(PageItem* textNode)
 void PdfTextRegion::Merge(PdfTextRegion *regionToMergeIn)
 {
 
-	qDebug() << "linebase:" << lineBaseXY << ":" << regionToMergeIn->lineBaseXY << "lastxy:" << lastXY;
+	//qDebug() << "linebase:" << lineBaseXY << ":" << regionToMergeIn->lineBaseXY << "lastxy:" << lastXY;
 	for (int line = 0; line < regionToMergeIn->pdfTextRegionLines.size(); line++)
 	{
 		moveToPoint(regionToMergeIn->pdfTextRegionLines[line].baseOrigin);
