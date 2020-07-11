@@ -1364,8 +1364,14 @@ void SlaOutputDev::startDoc(PDFDoc *doc, XRef *xrefA, Catalog *catA)
 	std::vector<FontInfo *> fi = fis->scan(doc->getNumPages());
 	for (auto it = fi.begin(); it != fi.end(); ++it)
 	{
-		qDebug() << "name:" << ((*it)->getName() ? (*it)->getName()->c_str() : "unnamed" )<< " type:"<< (*it)->getType();
+		qDebug() << "name:" << ((*it)->getName() ? (*it)->getName()->c_str() : "unnamed" )<< " type:"<< (*it)->getType();		
 	}
+	//GfxFontDict::GfxFontDict()
+	//for (int i = 0; i < GfxFontDict::getNumFonts(); ++i)
+	//{
+	//}
+
+	//GfxFont fgxFont = new GfxFont();
 	delete fis;
 }
 

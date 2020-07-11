@@ -1339,6 +1339,7 @@ bool PdfTextOutputDev::faceMatches(ScFace& face1, ScFace& face2)
 
 	return true;
 }
+
 void PdfTextOutputDev::updateFillColor(GfxState* state)
 {
 	SlaOutputDev::updateFillColor(state);
@@ -1432,40 +1433,6 @@ static int CountMatchingStringListItems(QStringList& listA, QStringList& listB)
 	return matchCount;
 }
 
-/*
-	SvgBuilder::BestMatchingFont
-	Scan the available fonts to find the font name that best matches PDFname.
-*/
-/* old code, may be usefull
-QString PdfTextOutputDev::bestMatchingFont(QString PDFname)
-{
-	//qDebug() << "_bestMatchingFont():" << PDFname;
-	double bestMatch = 0;
-	int bestMatchCharateristicsCount = MAXINT;
-	QString bestFontname = "Arial";
-
-	for (auto fontname : m_availableFontNames)
-	{
-		QStringList familyNameAndCharacteristicsAF = fontname.split(" ");
-		QStringList familyNameAndCharacteristicsPDF = PDFname.split("-");  //also Camel case sometimes.
-		size_t matchingItems = CountMatchingStringListItems(familyNameAndCharacteristicsAF, familyNameAndCharacteristicsPDF);
-		if (matchingItems > bestMatch || matchingItems == bestMatch && familyNameAndCharacteristicsAF.size() < bestMatchCharateristicsCount)
-		{
-			bestMatch = matchingItems;
-			bestFontname = fontname;
-			bestMatchCharateristicsCount = familyNameAndCharacteristicsAF.size();
-		}
-	}
-
-	if (bestMatch > 0)
-	{
-		//qDebug() << "bestFontname: " << bestFontname << " PDFname:" << PDFname;
-		return bestFontname;
-	}
-	else
-		return "Arial";
-}
-*/
 qreal ModeArray::add(qreal value)
 {
 	int iValue = value * 10;
