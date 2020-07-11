@@ -221,7 +221,6 @@ public:
 	void renderToTextFrame(PageItem* textNode);
 	void doBreaksAndSpaces(void);
 	void insertChar(std::vector<PdfTextRegionLine>::iterator textRegionLineItterator, int increment, QChar qChar);
-	void Merge(PdfTextRegion* regionToMergeIn);	
 	void setNewFontAndStyle(PdfGlyphStyle* fontAndSttle);
 	std::vector<PdfGlyph> glyphs;
 	bool isNew();
@@ -234,12 +233,6 @@ private:
 	qreal m_maxWidth = {};
 	QPointF m_lineBaseXY = QPointF({ }, { }); //updated with the best match left value from all the textRegionLines and the best bottom value from the textRegionLines.segments;
 	QPointF m_lastXY = QPointF({}, {});
-
-	void SetNewFontAndStyle(PdfGlyphStyle* fontAndSttle);
-	std::vector<PdfGlyph> glyphs;
-	bool isNew();
-private:
-	qreal m_em = { 1.0 };
 	PdfGlyphStyle* m_newFontStyleToApply = nullptr;          
 	PdfTextRegion::LineType m_lastMode = PdfTextRegion::LineType::FIRSTPOINT;
 };
@@ -248,9 +241,6 @@ class PdfTextRecognition
 {
 public:
 	PdfTextRecognition();
-	void MergeAjacentRegions();
-	int PdfTextRegionCount();
-	void ActivateTextRegion(int index);
 	~PdfTextRecognition();
 
 	enum class AddCharMode
@@ -279,7 +269,7 @@ public:
 	}
 
 
-	PdfTextRegion *activePdfTextRegion = new PdfTextRegion(); //faster and cleaner than calling back on the vector all the time.
+	PdfTextRegion&& activePdfTextRegion = PdfTextRegion(); //faster and cleaner than calling back on the vector all the time.
 	void addPdfTextRegion();
 	void addChar(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, POPPLER_CONST_082 Unicode* u, int uLen);
 	bool isChangeOnSameLine(QPointF newPosition);
@@ -320,8 +310,6 @@ public:
 
 	//----- text drawing
 	void beginTextObject(GfxState* state) override;
-	void endPage() override;
-	void startPage(int pagenum, GfxState* state, XRef* xref) override;
 	void endTextObject(GfxState* state) override;
 	void drawChar(GfxState* state, double x, double y, double dx, double dy, double originX, double originY, CharCode code, int nBytes, POPPLER_CONST_082 Unicode* u, int uLen) override;
 	GBool beginType3Char(GfxState* /*state*/, double /*x*/, double /*y*/, double /*dx*/, double /*dy*/, CharCode /*code*/, POPPLER_CONST_082 Unicode* /*u*/, int /*uLen*/) override;
