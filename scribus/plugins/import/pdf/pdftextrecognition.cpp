@@ -231,8 +231,8 @@ void PdfTextRecognition::ActivateTextRegion(int index)
 PdfTextRecognition::~PdfTextRecognition()
 {
 	for (auto itterator = m_pdfTextRegions.begin(); itterator < m_pdfTextRegions.end(); itterator++)
-	{		
-			delete (*itterator);
+	{
+		delete (*itterator);
 	}
 }
 
@@ -323,6 +323,234 @@ PdfGlyph PdfTextRecognition::AddCharCommon(GfxState* state, double x, double y, 
 	newGlyph.code = static_cast<char16_t>(u[uLen - 1]);
 	newGlyph.rise = state->getRise();
 	return newGlyph;
+}
+
++ void PdfTextRecognition::MergeAjacentRegions()
+{
+	//return;
+	std::vector<int> whiteSpaceToDrop = std::vector<int>();
+	std::vector<PdfTextRegion*> whiteSpaceToMerge = std::vector<PdfTextRegion*>();
+	int index = -1;
+	for (auto textRegion = m_pdfTextRegions.begin(); textRegion < m_pdfTextRegions.end(); textRegion++)
+	{
+		//qDebug() << (*textRegion)->glyphs.front().code;
+		index++;
+		bool mergedOrDropped = false;
+		if ((*textRegion)->pdfTextRegionLines.size() == 1)
+		{
+			for (auto mergeRegion = whiteSpaceToMerge.begin(); mergeRegion < whiteSpaceToMerge.end(); mergeRegion++)
+			{
+				if ((*textRegion)->lineBaseXY != QPointF(0.0, 0.0))
+				{
+					PdfTextRegion::LineType lineMatchType = (*mergeRegion)->isRegionConcurrent((*textRegion)->lineBaseXY);
+
+					if (lineMatchType != PdfTextRegion::LineType::FAIL)
+					{
+						//qDebug() << "lineMatchType:" << (int)lineMatchType;
+						if ((*textRegion)->glyphs.front().code == ' ' && (*mergeRegion)->glyphs.back().code == ' ')
+						{
+							whiteSpaceToDrop.push_back(index);
+						}
+						mergedOrDropped = true;
+						break;
+					}
+					/*
+					else if((*textRegion)->glyphs.back().code == ' ' && (*textRegion)->glyphs.size() == 1)
+					{
+						whiteSpaceToDrop.push_back(index);
+						//mergedOrDropped = true;
+						//break;
+					}
+					*/
+				}
+				else
+				{
+					whiteSpaceToDrop.push_back(index);
+					mergedOrDropped = true;
+					break;
+				}
+			}
+		}
+		if (mergedOrDropped == false && (*textRegion)->pdfTextRegionLines.size() == 1)
+		{
+			if ((*textRegion)->glyphs.back().code == ' ' && (*textRegion)->glyphs.size() == 1)
+			{
+				whiteSpaceToDrop.push_back(index);
+			}
+			else
+			{
+				whiteSpaceToMerge.push_back((*textRegion));
+				//toKeep.push_back(index);
+			}
+		}
+		else if (mergedOrDropped == false && (*textRegion)->pdfTextRegionLines.size() > 1)
+		{
+			whiteSpaceToMerge.push_back((*textRegion));
+			//toKeep.push_back(index);
+		}
+		else if (mergedOrDropped == false)
+		{
+			whiteSpaceToDrop.push_back(index);
+		}
+	}
+
+	index = -1;// m_pdfTextRegions.size();
+
+	std::vector < std::vector<PdfTextRegion*>::iterator> toErase = std::vector < std::vector<PdfTextRegion*>::iterator>();
+	for (std::vector<PdfTextRegion*>::iterator regionItterarator = m_pdfTextRegions.begin(); regionItterarator < m_pdfTextRegions.end(); regionItterarator++)
+	{
+		index++;
+		bool keep = true;
+		for (auto toDropItterator = whiteSpaceToDrop.begin(); toDropItterator < whiteSpaceToDrop.end(); toDropItterator++)
+		{
+			if (index == *toDropItterator)
+			{
+				keep = false;
+				break;
+			}
+		}
+		if (keep == false)
+		{
+			toErase.push_back(regionItterarator);
+		}
+	}
+	for (int eraseItterator = toErase.size() - 1; eraseItterator >= 0; eraseItterator--)
+	{
+		delete* toErase[eraseItterator];
+		m_pdfTextRegions.erase(toErase[eraseItterator]);
+	}
+	//return;
+	std::vector<PdfTextRegion*> toMerge = std::vector<PdfTextRegion*>();
+	std::vector<int> toKeep = std::vector<int>();
+	std::vector<int> toDrop = std::vector<int>();
+	index = -1;
+	for (auto textRegion = m_pdfTextRegions.begin(); textRegion < m_pdfTextRegions.end(); textRegion++)
+	{
+		//qDebug() << (*textRegion)->glyphs.front().code;
+		index++;
+		bool mergedOrDropped = false;
+		if ((*textRegion)->pdfTextRegionLines.size() == 1)
+		{
+			for (auto mergeRegion = toMerge.begin(); mergeRegion < toMerge.end(); mergeRegion++)
+			{
+				if ((*textRegion)->lineBaseXY != QPointF(0.0, 0.0))
+				{
+					if ((*textRegion)->lineBaseXY.x() > 337.720 && (*textRegion)->lineBaseXY.x() < 337.800 && (*textRegion)->lineBaseXY.y() < 485.36 && (*textRegion)->lineBaseXY.y() > 484.36)
+					{
+						//qDebug() << "why doeds this fail?";
+					}
+					PdfTextRegion::LineType lineMatchType = (*mergeRegion)->isRegionConcurrent((*textRegion)->lineBaseXY);
+
+					if (lineMatchType != PdfTextRegion::LineType::FAIL)
+					{
+						//qDebug() << "lineMatchType:" << (int)lineMatchType;
+						if ((*textRegion)->glyphs.front().code != ' ' || (*mergeRegion)->glyphs.back().code != ' ')
+						{
+							//qDebug() << "merging point:" << (*textRegion)->lastXY << " base:" << (*textRegion)->lineBaseXY << " mergeregion lastxy" << (*mergeRegion)->lastXY << " base:" << (*mergeRegion)->lineBaseXY;
+							(*mergeRegion)->Merge((*textRegion));
+							toDrop.push_back(index);
+						}
+						else
+						{
+							toDrop.push_back(index);
+						}
+						mergedOrDropped = true;
+						break;
+					}
+					else
+					{
+						//qDebug() << "linematch == fail lasyxy:" << (*mergeRegion)->lastXY << " linebasexy:" << (*textRegion)->lineBaseXY;
+					}
+				}
+				else
+				{
+					toDrop.push_back(index);
+					mergedOrDropped = true;
+					break;
+				}
+			}
+		}
+		else
+		{
+			//qDebug() << "more than one line";
+		}
+		if (mergedOrDropped == false && (*textRegion)->pdfTextRegionLines.size() == 1)
+		{
+			//qDebug() << "newmnergepoint:" << (*textRegion)->lastXY << " base:" << (*textRegion)->lineBaseXY;
+			//auto mergeRegion = toMerge.begin();
+			toMerge.insert(toMerge.begin(), (*textRegion));
+			toKeep.push_back(index);
+		}
+		else if (mergedOrDropped == false && (*textRegion)->pdfTextRegionLines.size() > 1)
+		{
+			//qDebug() << "lines:" << (*textRegion)->pdfTextRegionLines.size();
+			toKeep.push_back(index);
+		}
+		else if (mergedOrDropped == false)
+		{
+			//qDebug() << "dropping:" << index;
+			toDrop.push_back(index);
+		}
+	}
+	//erase all the regions marked tyo be dropped.
+	index = -1;// m_pdfTextRegions.size();	
+	toErase.clear();
+	for (std::vector<PdfTextRegion*>::iterator regionItterarator = m_pdfTextRegions.begin(); regionItterarator < m_pdfTextRegions.end(); regionItterarator++)
+	{
+		index++;
+		bool keep = true;
+		for (auto toDropItterator = toDrop.begin(); toDropItterator < toDrop.end(); toDropItterator++)
+		{
+			if (index == *toDropItterator)
+			{
+				keep = false;
+				break;
+			}
+		}
+		if (keep == false)
+		{
+			toErase.push_back(regionItterarator);
+		}
+	}
+	for (int eraseItterator = toErase.size() - 1; eraseItterator >= 0; eraseItterator--)
+	{
+		delete* toErase[eraseItterator];
+		m_pdfTextRegions.erase(toErase[eraseItterator]);
+	}
+
+}
+int PdfTextRecognition::PdfTextRegionCount()
+{
+	return m_pdfTextRegions.size();
+}
+void PdfTextRecognition::ActivateTextRegion(int index)
+{
+	activePdfTextRegion = m_pdfTextRegions[index];
+}
+
+void PdfTextRegion::Merge(PdfTextRegion* regionToMergeIn)
+{
+
+	//qDebug() << "linebase:" << lineBaseXY << ":" << regionToMergeIn->lineBaseXY << "lastxy:" << lastXY;
+	for (int line = 0; line < regionToMergeIn->pdfTextRegionLines.size(); line++)
+	{
+		moveToPoint(regionToMergeIn->pdfTextRegionLines[line].baseOrigin);
+		int glyphIndex = regionToMergeIn->pdfTextRegionLines[line].glyphIndex;
+		for (int segment = 0; segment < regionToMergeIn->pdfTextRegionLines[line].segments.size(); segment++)
+		{
+			moveToPoint(regionToMergeIn->pdfTextRegionLines[line].segments[segment].baseOrigin);
+			for (auto glyph = glyphIndex; glyph <= regionToMergeIn->pdfTextRegionLines[line].segments[segment].glyphIndex; glyph++)
+			{
+				glyphs.push_back(regionToMergeIn->glyphs[glyph]);
+			}
+			QPointF segmentEnd = regionToMergeIn->pdfTextRegionLines[line].segments[segment].baseOrigin;
+			segmentEnd.setX(segmentEnd.x() + regionToMergeIn->pdfTextRegionLines[line].segments[segment].width);
+			this->SetNewFontAndStyle(&(regionToMergeIn->pdfTextRegionLines[line].segments[segment].pdfGlyphStyle));
+			addGlyphAtPoint(segmentEnd, glyphs.back());
+			glyphIndex = regionToMergeIn->pdfTextRegionLines[line].segments[segment].glyphIndex + 1;
+		}
+	}
+
 }
 
 /*
@@ -435,7 +663,16 @@ bool PdfTextRegion::isCloseToX(qreal x1, qreal x2)
 */
 bool PdfTextRegion::isCloseToY(qreal y1, qreal y2)
 {	
-	return (y2 - y1) >= 0 && y2 - y1 <= lineSpacing * 2;	
+	/* HEAD
+	int lineSpacingFraction = lineSpacing().mode() == 0.0 ? 0 : static_cast<int>(((y2 - y1) * 10000.0 / lineSpacing().mode()));
+
+	int lineSpacingMod = lineSpacingFraction % 10000;
+@ -289,6 +503,8 @@ bool PdfTextRegion::isCloseToY(qreal y1, qreal y2)
+	{
+		return (y2 - y1) >= 0 && lineSpacingFraction <= 20000 && (lineSpacingMod >= 5300.0 || lineSpacingMod <= 4800.0);
+	}
+*/
+	return (y2 - y1) >= 0 && y2 - y1 <= lineSpacing * 2;
 }
 
 /*
@@ -616,6 +853,7 @@ PdfTextRegion::LineType PdfTextRegion::moveToPoint(QPointF newPoint)
 	return mode;
 }
 
+
 /*
 *	Add a new glyph to the current line segment, lines and segments should already have been setup by the
 *	moveto function which should generally be called prior to addGlyph to setup the lines and segments correctly.
@@ -633,11 +871,14 @@ PdfTextRegion::LineType PdfTextRegion::addGlyphAtPoint(QPointF newGlyphPoint, Pd
 	QPointF movedGlyphPoint = QPointF(newGlyphPoint.x() + newGlyph.dx, newGlyphPoint.y() + newGlyph.dy);
 	if (glyphs.size() == 1)
 	{
-		QFontMetrics qFontMetrics = QFontMetrics(m_newFontStyleToApply->font);
+		/*QFontMetrics qFontMetrics = QFontMetrics(m_newFontStyleToApply->font);
 		lineSpacing = qFontMetrics.height();
 		m_em = qFontMetrics.averageCharWidth();
-		lastXY = newGlyphPoint;
-		lineBaseXY = newGlyphPoint;
+		*/
+		lineSpacing().add((m_newFontStyleToApply->face.height() - m_newFontStyleToApply->face.descent() )* m_newFontStyleToApply->pointSizeF * m_newFontStyleToApply->fontScaling);
+		setFontAssending(m_newFontStyleToApply->face.ascent() * m_newFontStyleToApply->pointSizeF * m_newFontStyleToApply->fontScaling);
+		setLastXY(newGlyphPoint);
+		setLineBaseXY(newGlyphPoint);
 	}
 
 	LineType mode = m_lastMode;
