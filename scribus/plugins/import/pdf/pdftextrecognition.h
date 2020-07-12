@@ -126,6 +126,7 @@ public:
 	PdfTextRegion::LineType linearTest(QPointF point, bool xInLimits, bool yInLimits);
 	PdfTextRegion::LineType isRegionConcurrent(QPointF newPoint);
 	PdfTextRegion::LineType moveToPoint(QPointF newPoint);
+	QPointF density();
 	PdfTextRegion::LineType addGlyphAtPoint(QPointF newGlyphPoint, PdfGlyph new_glyph);
 	void renderToTextFrame(PageItem* textNode);
 	void Merge(PdfTextRegion* regionToMergeIn);	
