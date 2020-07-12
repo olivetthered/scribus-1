@@ -143,6 +143,7 @@ class PdfTextRecognition
 {
 public:
 	PdfTextRecognition();
+	void ClearUpExcessSpacePass1();
 	void MergeAjacentRegions();
 	int PdfTextRegionCount();
 	void ActivateTextRegion(int index);
